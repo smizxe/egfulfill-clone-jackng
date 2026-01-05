@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 3.1 Users / Auth
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("SELLER") // ADMIN, ACCOUNTANT, SELLER, PRODUCTION
+  sellerId     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  seller       Seller?  @relation(fields: [sellerId], references: [id])
+  auditLogs    AuditLog[]
+  confirmedTopups TopupRequest[] @relation("ConfirmedBy")
+  inventoryLogs   InventoryMovement[]
+}
+
+model Seller {
+  id           String   @id @default(uuid())
+  code         String   @unique // e.g. SEL001
+  name         String
+  contactEmail String?
+  phone        String?
+  address      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users         User[]
+  wallet        Wallet?
+  walletLedger  WalletLedger[]
+  topupRequests TopupRequest[]
+  orders        Order[]
+  jobs          Job[]
+}
+
+// 3.2 Wallet & Ledger
+model Wallet {
+  id        String   @id @default(uuid())
+  sellerId  String   @unique
+  balance   Float    @default(0.0)
+  currency  String   @default("USD")
+  updatedAt DateTime @updatedAt
+  
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+}
+
+model WalletLedger {
+  id        String   @id @default(uuid())
+  sellerId  String
+  type      String   // CREDIT, DEBIT, ADJUST
+  amount    Float
+  currency  String   @default("USD")
+  refType   String   // TOPUP, ORDER, MANUAL
+  refId     String?
+  note      String?
+  createdBy String?  // User ID or SYSTEM
+  createdAt DateTime @default(now())
+
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+  // Index: seller_id, created_at, ref_type+ref_id (Prisma handles indexes via @@index)
+  @@index([sellerId])
+  @@index([refType, refId])
+  @@index([createdAt])
+}
+
+// 3.3 Topup Requests
+model TopupRequest {
+  id              String   @id @default(uuid())
+  sellerId        String
+  amount          Float
+  currency        String   @default("VND") // User mentioned Seller (VN), assuming VND transfer but Wallet might be USD. I will keep it flexible or standard.
+  bankName        String?
+  bankAccount     String?
+  transferContent String?
+  status          String   // PENDING, CONFIRMED, REJECTED
+  evidenceUrl     String?
+  confirmedById   String?
+  confirmedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  seller      Seller @relation(fields: [sellerId], references: [id])
+  confirmedBy User?  @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+}
+
+// 3.4 Products & Pricing
+model Product {
+  id        String   @id @default(uuid())
+  sku       String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  variants  ProductVariant[]
+}
+
+model ProductVariant {
+  id           String   @id @default(uuid())
+  productId    String
+  color        String?
+  size         String?
+  basePrice    Float
+  cogsEstimate Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  product      Product  @relation(fields: [productId], references: [id])
+  @@unique([productId, color, size]) // Unique variant constraint
+}
+
+// 3.5 Inventory
+model InventoryItem {
+  id        String   @id @default(uuid())
+  sku       String   // Can be Product SKU or Variant logic. Let's assume matches ProductVariant or Product.
+  color     String?
+  size      String?
+  onHand    Int      @default(0)
+  reserved  Int      @default(0)
+  minStock  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([sku, color, size])
+}
+
+model InventoryMovement {
+  id        String   @id @default(uuid())
+  sku       String
+  color     String?
+  size      String?
+  qtyChange Int
+  type      String   // RESERVE, UNRESERVE, DEDUCT, ADD, ADJUST
+  refType   String?
+  refId     String?
+  createdById String?
+  createdAt DateTime @default(now())
+  
+  createdBy User?    @relation(fields: [createdById], references: [id])
+}
+
+// 3.6 Orders / Jobs
+model Order {
+  id              String   @id @default(uuid())
+  sellerId        String
+  orderCode       String   @unique // ORD-202501-000123
+  status          String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, RECEIVED, IN_PROCESS, COMPLETED, SHIPPED, REJECTED
+  totalAmount     Float
+  currency        String   @default("USD")
+  
+  shippingCountry String?
+  shippingMethod  String?
+  trackingNumber  String?
+  carrier         String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+  jobs      Job[]
+  shipments Shipment[]
+}
+
+model Job {
+  id                  String   @id @default(uuid())
+  orderId             String
+  sellerId            String
+  jobCode             String   @unique // JOB000001
+  status              String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, RECEIVED, IN_PROCESS, COMPLETED, REJECTED
+  
+  sku                 String
+  color               String?
+  size                String?
+  qty                 Int      @default(1)
+  
+  recipientName       String?
+  phone               String?
+  address1            String?
+  address2            String?
+  city                String?
+  state               String?
+  zip                 String?
+  country             String?
+  
+  designs             String   @default("[]") // JSON: [{url: string, location: string}]
+  fileLocalPath       String?
+  fileStatus          String   @default("PENDING") // PENDING, DOWNLOADED, FAILED
+  
+  priceToCharge       Float
+  cogsActual          Float?
+  notes               String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  order   Order   @relation(fields: [orderId], references: [id])
+  seller  Seller  @relation(fields: [sellerId], references: [id])
+  tokens  QrToken[]
+  
+  @@index([sellerId])
+  @@index([status])
+}
+
+// 3.7 QR Tokens
+model QrToken {
+  id        String   @id @default(uuid())
+  jobId     String
+  type      String   // FILE, STATUS
+  token     String   @unique
+  maxUses   Int?
+  usedCount Int      @default(0)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  
+  job       Job      @relation(fields: [jobId], references: [id])
+}
+
+// 3.8 Shipments
+model Shipment {
+  id             String   @id @default(uuid())
+  orderId        String
+  carrier        String?
+  trackingNumber String?
+  labelPdfUrl    String?
+  status         String   // CREATED, LABEL_PRINTED, SHIPPED
+  createdAt      DateTime @default(now())
+  
+  order          Order    @relation(fields: [orderId], references: [id])
+}
+
+// 3.9 Audit Logs
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  actorType   String   // USER, QR
+  action      String
+  entityType  String
+  entityId    String?
+  metaJson    String?  // Store JSON data
+  createdAt   DateTime @default(now())
+  
+  actorUser   User?    @relation(fields: [actorUserId], references: [id])
+}
