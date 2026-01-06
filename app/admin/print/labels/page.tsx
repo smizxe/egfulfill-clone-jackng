@@ -1,11 +1,5 @@
 import React from 'react';
 import { prisma } from '@/lib/prisma';
-import QRCode from 'qrcode.react'; // Need to check if this package is installed or use a different one
-// package.json has "qrcode.react": "^4.2.0". It's a client component library usually? 
-// Actually qrcode.react is for Client. In Server Component I should use 'qrcode' package or render on client.
-// To avoid hydration issues, I'll make this a Client Page or Client Component wrapper.
-// Since we need to read Params and Fetch Data, I'll fetch data in Server Page, pass to Client Component for Rendering.
-
 import PrintableLabels from './PrintableLabels';
 
 export default async function PrintLabelsPage({ searchParams }: { searchParams: { ids: string } }) {

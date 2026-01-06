@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
     try {
@@ -18,32 +19,24 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
         }
 
-        // Simple password check (schema uses passwordHash)
-        // In a real app, use bcrypt.compare(password, user.passwordHash)
-        if (user.passwordHash !== password) {
+        // Compare password (bcrypt for new users, string compare for legacy)
+        let isValid = false;
+        try {
+            isValid = await bcrypt.compare(password, user.passwordHash);
+        } catch (e) {
+            // Ignore error if not a valid hash
+        }
+
+        // Fallback for legacy plain text passwords
+        if (!isValid && user.passwordHash === password) {
+            isValid = true;
+        }
+
+        if (!isValid) {
             return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
         }
 
-        // Successful login - Create Session Cookie
-        const response = NextResponse.json({
-            success: true,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                name: user.role === 'SELLER' ? 'Partner' : 'Admin',
-                // Note: user doesn't have name directly, usually in Seller profile?
-                // Schema has 'name' on User? NO. Schema: User { email, passwordHash, role, ... }
-                // Schema: Seller { name, code ... }
-                // Let's check schema again. User does NOT have name.
-                balance: 0 // Balance is on Wallet, accessed via Seller?
-            }
-        });
-
-        // Let's fetch extra details if needed for frontend state?
-        // Actually, let's keep it simple. The frontend likely expects 'name' and 'balance'.
-        // If Role is Seller, we might want to fetch that.
-
+        // Fetch extra details for frontend state
         let userName = 'User';
         let userBalance = 0;
 

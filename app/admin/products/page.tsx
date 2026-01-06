@@ -28,7 +28,9 @@ export default async function AdminProductsPage() {
             colors: uniqueColors,
             sizes: uniqueSizes,
             basePrice: basePrices.length > 0 ? Math.min(...basePrices) : 0,
-            variants: p.variants
+            variants: p.variants,
+            shippingRates: p.shippingRates,
+            extraFees: p.extraFees
         };
     });
 

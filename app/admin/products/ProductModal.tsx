@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Switch, message, Select, InputNumber, Table, Checkbox, Divider } from 'antd';
+import { Modal, Form, Input, Switch, message, Select, InputNumber, Table, Checkbox, Divider, Button } from 'antd';
 
 interface ProductModalProps {
     open: boolean;
@@ -36,7 +36,9 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     isActive: product.isActive,
                     colors: product.colors || [],
                     sizes: product.sizes || [],
-                    basePrice: product.basePrice || 0
+                    basePrice: product.basePrice || 0,
+                    shippingRates: product.shippingRates ? JSON.parse(product.shippingRates) : [],
+                    extraFees: product.extraFees ? JSON.parse(product.extraFees) : []
                 });
                 setCurrentColors(product.colors || []);
                 setCurrentSizes(product.sizes || []);
@@ -134,7 +136,9 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                 sku: values.sku,
                 name: values.name,
                 isActive: values.isActive,
-                variants: variants
+                variants: variants,
+                shippingRates: JSON.stringify(values.shippingRates || []),
+                extraFees: JSON.stringify(values.extraFees || [])
             };
 
             const url = isEdit ? `/api/admin/products/${product.id}` : '/api/admin/products';
@@ -233,7 +237,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     </Form.Item>
                 </div>
 
-                <Divider orientation="left">Variants</Divider>
+                <Divider>Variants</Divider>
 
                 <div className="grid grid-cols-2 gap-4">
                     <Form.Item name="colors" label="Colors (Type and press Enter)">
@@ -243,6 +247,112 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                         <Select mode="tags" placeholder="S, M, L, XL..." tokenSeparators={[',']} />
                     </Form.Item>
                 </div>
+
+                <Divider>Shipping Rates</Divider>
+                <Form.List name="shippingRates">
+                    {(fields, { add, remove }) => (
+                        <>
+                            <Table
+                                dataSource={fields}
+                                pagination={false}
+                                size="small"
+                                rowKey="key"
+                                columns={[
+                                    {
+                                        title: 'Operator',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'operator']} initialValue="Equal" style={{ marginBottom: 0 }}>
+                                                <Select style={{ width: 130 }}>
+                                                    <Select.Option value="Equal">Equal</Select.Option>
+                                                    <Select.Option value="Greater or Equal">Greater or Equal</Select.Option>
+                                                </Select>
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Quantity',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'quantity']} initialValue={1} style={{ marginBottom: 0 }}>
+                                                <InputNumber min={1} />
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Shipping Fees ($)',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'shippingFee']} initialValue={0} style={{ marginBottom: 0 }}>
+                                                <InputNumber min={0} precision={2} prefix="$" />
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Action',
+                                        dataIndex: 'name',
+                                        render: (name: number) => <Button type="text" danger onClick={() => remove(name)}>Delete</Button>
+                                    }
+                                ]}
+                                footer={() => <Button type="dashed" onClick={() => add()} block>+ Add Shipping Rate</Button>}
+                            />
+                        </>
+                    )}
+                </Form.List>
+
+                <Divider>Extra Fees</Divider>
+                <Form.List name="extraFees">
+                    {(fields, { add, remove }) => (
+                        <>
+                            <Table
+                                dataSource={fields}
+                                pagination={false}
+                                size="small"
+                                rowKey="key"
+                                columns={[
+                                    {
+                                        title: 'Position',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'position']} initialValue="Front" style={{ marginBottom: 0 }}>
+                                                <Input placeholder="e.g. Hat Front" />
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Type',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'type']} initialValue="EMBROIDERY" style={{ marginBottom: 0 }}>
+                                                <Select style={{ width: 140 }}>
+                                                    <Select.Option value="EMBROIDERY">EMBROIDERY</Select.Option>
+                                                    <Select.Option value="PRINTING">PRINTING</Select.Option>
+                                                    <Select.Option value="LEATHER_PATCH">LEATHER_PATCH</Select.Option>
+                                                    <Select.Option value="OTHER">OTHER</Select.Option>
+                                                </Select>
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Surcharge ($)',
+                                        dataIndex: 'name',
+                                        render: (name: number) => (
+                                            <Form.Item name={[name, 'surcharge']} initialValue={0} style={{ marginBottom: 0 }}>
+                                                <InputNumber min={0} precision={2} prefix="$" />
+                                            </Form.Item>
+                                        )
+                                    },
+                                    {
+                                        title: 'Action',
+                                        dataIndex: 'name',
+                                        render: (name: number) => <Button type="text" danger onClick={() => remove(name)}>Delete</Button>
+                                    }
+                                ]}
+                                footer={() => <Button type="dashed" onClick={() => add()} block>+ Add Extra Fee</Button>}
+                            />
+                        </>
+                    )}
+                </Form.List>
             </Form>
 
             {/* Special Pricing Sections */}
@@ -307,6 +417,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     </ul>
                 </div>
             )}
+
         </Modal>
     );
 }

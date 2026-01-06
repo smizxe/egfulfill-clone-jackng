@@ -22,6 +22,20 @@ model User {
   auditLogs    AuditLog[]
   confirmedTopups TopupRequest[] @relation("ConfirmedBy")
   inventoryLogs   InventoryMovement[]
+  verificationTokens VerificationToken[]
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  identifier String   // Email
+  token      String   
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  
+  userId     String? // Optional linking to user if created before/after
+  user       User?   @relation(fields: [userId], references: [id])
+  
+  @@unique([identifier, token])
 }
 
 model Seller {
@@ -97,6 +111,8 @@ model Product {
   sku       String   @unique
   name      String
   isActive  Boolean  @default(true)
+  shippingRates String? // JSON: [{minQty: number, rate: number, label: string}]
+  extraFees     String? // JSON: [{label: string, surcharge: number, type: string}]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   variants  ProductVariant[]
@@ -193,6 +209,7 @@ model Job {
   designs             String   @default("[]") // JSON: [{url: string, location: string}]
   fileLocalPath       String?
   fileStatus          String   @default("PENDING") // PENDING, DOWNLOADED, FAILED
+  embroideryDriveLink String?  // Link to embroidery file on gdrive
   
   priceToCharge       Float
   cogsActual          Float?

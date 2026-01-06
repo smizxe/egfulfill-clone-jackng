@@ -18,6 +18,11 @@ export default async function FileViewerPage({ params }: { params: { token: stri
 
     const job = qrToken.job;
 
+    let parsedDesigns: any[] = [];
+    try {
+        if (job.designs) parsedDesigns = JSON.parse(job.designs);
+    } catch (e) { }
+
     return (
         <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
             <div className="bg-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-lg border border-slate-700">
@@ -47,8 +52,35 @@ export default async function FileViewerPage({ params }: { params: { token: stri
                 </div>
 
                 <div className="space-y-4">
-                    {/* Primary Drive Link */}
-                    {job.embroideryDriveLink && (
+                    {/* Design Links */}
+                    {parsedDesigns.length > 0 ? (
+                        <div className="space-y-4">
+                            {parsedDesigns.map((d: any, idx: number) => (
+                                <div key={idx} className="bg-slate-700 p-4 rounded-lg">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="text-slate-400 text-sm font-bold uppercase">
+                                            {`POS ${idx + 1}${d.location ? ` - ${d.location}` : ''}`}
+                                        </h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <a href={d.url} target="_blank" className="block w-full py-3 bg-blue-600 hover:bg-blue-500 text-center rounded-lg font-bold text-white transition-colors">
+                                            OPEN DESIGN
+                                        </a>
+                                        {d.mockup && (
+                                            <a href={d.mockup} target="_blank" className="block w-full py-3 bg-purple-600 hover:bg-purple-500 text-center rounded-lg font-bold text-white transition-colors">
+                                                OPEN MOCKUP
+                                            </a>
+                                        )}
+                                        {d.type && (
+                                            <div className="w-full py-2 text-center rounded-lg font-bold text-orange-400 bg-slate-800 border border-slate-600">
+                                                TYPE: {d.type}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : job.embroideryDriveLink ? (
                         <a
                             href={job.embroideryDriveLink}
                             target="_blank"
@@ -57,7 +89,7 @@ export default async function FileViewerPage({ params }: { params: { token: stri
                         >
                             OPEN IN GOOGLE DRIVE
                         </a>
-                    )}
+                    ) : null}
 
                     {/* Local File Fallback (Placeholder) */}
                     {job.fileLocalPath && (

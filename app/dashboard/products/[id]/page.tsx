@@ -13,7 +13,8 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
     }
 
     const product = await prisma.product.findUnique({
-        where: { id: params.id }
+        where: { id: params.id },
+        include: { variants: true }
     });
 
     if (!product) {

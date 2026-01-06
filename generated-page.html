@@ -1,0 +1,781 @@
+<html lang="en" class="scroll-smooth"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[BRAND_NAME] | Modern Fulfillment for POD &amp; Dropshipping</title>
+    
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9', // Primary Blue/Cyan
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        accent: {
+                            500: '#6366f1', // Indigo accent
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 10s infinite',
+                        'fade-up': 'fadeUp 0.8s ease-out forwards',
+                        'spin-slow': 'spin 12s linear infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base Variables for Theming */
+        :root {
+            --bg-body: #ffffff;
+            --text-main: #18181b;
+            --text-muted: #71717a;
+            --card-bg: #ffffff;
+            --card-border: #e4e4e7;
+            --blob-opacity: 0.4;
+        }
+
+        /* Dark Theme Variables */
+        .dark {
+            --bg-body: #09090b;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --card-bg: #18181b;
+            --card-border: #27272a;
+            --blob-opacity: 0.2;
+        }
+
+        /* Gradient Theme Variables */
+        .gradient-theme {
+            --bg-body: #f8fafc;
+            --text-main: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(255, 255, 255, 0.5);
+        }
+        
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.5s ease, color 0.3s ease;
+        }
+
+        /* Utility Classes */
+        .glass-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            background-image: linear-gradient(to right, #0ea5e9, #6366f1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+        }
+
+        /* QR Code Pattern Simulation */
+        .qr-pattern {
+            background-image: radial-gradient(#000 40%, transparent 40%);
+            background-size: 8px 8px;
+        }
+
+        /* Reveal on Scroll Class */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Grid Background Pattern */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(128,128,128,0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(128,128,128,0.05) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden relative">
+
+    <!-- Theme Toggles (Fixed Bottom Right) -->
+    <div class="fixed bottom-6 right-6 z-50 flex gap-2 p-2 rounded-full glass-panel shadow-lg">
+        <button onclick="setTheme('light')" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" title="Light Mode">
+            <i data-lucide="sun" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+        </button>
+        <button onclick="setTheme('dark')" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" title="Dark Mode">
+            <i data-lucide="moon" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+        </button>
+    </div>
+
+    <!-- Background Elements -->
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-brand-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-0 right-1/4 w-96 h-96 bg-accent-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-32 left-1/3 w-96 h-96 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div class="absolute inset-0 bg-grid z-0"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-40 border-b border-white/10 glass-panel transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-2 cursor-pointer group">
+                <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-accent-500 rounded-lg flex items-center justify-center text-white font-bold tracking-tight shadow-md group-hover:scale-105 transition-transform">
+                    B
+                </div>
+                <span class="font-semibold text-lg tracking-tight text-[var(--text-main)] group-hover:text-brand-600 transition-colors">[BRAND_NAME]</span>
+            </div>
+
+            <!-- Desktop Nav -->
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-[var(--text-muted)]">
+                <a href="#solutions" class="hover:text-[var(--text-main)] transition-colors">Solutions</a>
+                <a href="#workflow" class="hover:text-[var(--text-main)] transition-colors">Workflow</a>
+                <a href="#features" class="hover:text-[var(--text-main)] transition-colors">Features</a>
+                <a href="#pricing" class="hover:text-[var(--text-main)] transition-colors">Pricing</a>
+            </div>
+
+            <!-- CTAs -->
+            <div class="hidden md:flex items-center gap-4">
+                <a href="#" class="text-sm font-medium text-[var(--text-main)] hover:text-brand-600 transition-colors">Login</a>
+                <button class="bg-[var(--text-main)] text-[var(--bg-body)] px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20">
+                    Request a Demo
+                </button>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="md:hidden text-[var(--text-main)]" onclick="toggleMobileMenu()">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden absolute top-16 left-0 w-full glass-panel border-b border-gray-200 dark:border-gray-800 p-6 flex-col gap-4 shadow-xl">
+            <a href="#solutions" class="block text-sm font-medium text-[var(--text-main)] py-2">Solutions</a>
+            <a href="#workflow" class="block text-sm font-medium text-[var(--text-main)] py-2">Workflow</a>
+            <a href="#features" class="block text-sm font-medium text-[var(--text-main)] py-2">Features</a>
+            <a href="#pricing" class="block text-sm font-medium text-[var(--text-main)] py-2">Pricing</a>
+            <div class="h-px bg-gray-200 dark:bg-gray-800 my-2"></div>
+            <button class="w-full bg-brand-600 text-white px-4 py-3 rounded-lg text-sm font-medium">Request a Demo</button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="relative z-10 pt-24 md:pt-32">
+
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-6 pb-24 lg:pb-32">
+            <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                <!-- Copy -->
+                <div class="reveal active flex flex-col items-start text-left">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50/50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400 text-xs font-medium mb-6">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                        </span>
+                        Accepting New Sellers for Q4
+                    </div>
+                    
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 text-[var(--text-main)]">
+                        Professional Fulfillment for <span class="text-gradient">POD &amp; Dropshipping</span>
+                    </h1>
+                    
+                    <p class="text-lg md:text-xl text-[var(--text-muted)] mb-8 leading-relaxed max-w-lg">
+                        Focus on selling. We handle production, inventory, and US/Canada shipping with full transparency and real-time tracking.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                        <button class="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
+                            Request a Demo
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                        <button class="px-8 py-3.5 rounded-full text-sm font-medium text-[var(--text-main)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="play-circle" class="w-4 h-4"></i>
+                            See How It Works
+                        </button>
+                    </div>
+
+                    <div class="mt-8 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+                        <span>No long-term contracts. Built to scale with your business.</span>
+                    </div>
+                </div>
+
+                <!-- Visual / Mockup -->
+                <div class="reveal delay-200 relative">
+                    <!-- Dashboard Mockup Container -->
+                    <div class="relative w-full aspect-[4/3] glass-panel rounded-2xl shadow-2xl overflow-hidden border border-[var(--card-border)] group">
+                        <!-- Top Bar -->
+                        <div class="h-10 border-b border-[var(--card-border)] bg-gray-50/50 dark:bg-white/5 flex items-center px-4 gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                        </div>
+                        
+                        <!-- Main Content of Mockup -->
+                        <div class="p-6 flex gap-6 h-full bg-[var(--card-bg)]">
+                            <!-- Sidebar -->
+                            <div class="w-16 hidden sm:flex flex-col gap-4 border-r border-[var(--card-border)] pr-4">
+                                <div class="w-8 h-8 rounded bg-brand-100 dark:bg-brand-900/50 mb-4"></div>
+                                <div class="w-full h-2 rounded bg-gray-100 dark:bg-gray-800"></div>
+                                <div class="w-full h-2 rounded bg-gray-100 dark:bg-gray-800"></div>
+                                <div class="w-full h-2 rounded bg-gray-100 dark:bg-gray-800"></div>
+                            </div>
+                            
+                            <!-- Main Area -->
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-6">
+                                    <div class="h-6 w-32 bg-gray-100 dark:bg-gray-800 rounded"></div>
+                                    <div class="h-8 w-24 bg-brand-500 rounded text-white text-[10px] flex items-center justify-center">Export CSV</div>
+                                </div>
+                                
+                                <!-- Chart Area -->
+                                <div class="h-32 w-full bg-gradient-to-t from-brand-50 to-transparent dark:from-brand-900/20 rounded-lg border border-brand-100 dark:border-brand-900/50 relative mb-4 overflow-hidden">
+                                    <svg class="absolute bottom-0 left-0 w-full h-full text-brand-500" viewBox="0 0 100 40" preserveAspectRatio="none">
+                                        <path d="M0,40 Q20,30 40,35 T80,10 T100,20 V40 H0 Z" fill="currentColor" opacity="0.1"></path>
+                                        <path d="M0,40 Q20,30 40,35 T80,10 T100,20" fill="none" stroke="currentColor" stroke-width="0.5"></path>
+                                    </svg>
+                                </div>
+
+                                <!-- Rows -->
+                                <div class="space-y-3">
+                                    <div class="h-10 w-full bg-gray-50 dark:bg-white/5 rounded flex items-center px-3 justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-6 h-6 rounded bg-gray-200 dark:bg-gray-700"></div>
+                                            <div class="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        </div>
+                                        <div class="w-12 h-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 text-[10px] flex items-center justify-center">Shipped</div>
+                                    </div>
+                                    <div class="h-10 w-full bg-gray-50 dark:bg-white/5 rounded flex items-center px-3 justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-6 h-6 rounded bg-gray-200 dark:bg-gray-700"></div>
+                                            <div class="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        </div>
+                                        <div class="w-12 h-4 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 text-[10px] flex items-center justify-center">Process</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Feature Cards -->
+                    <div class="absolute -top-6 -right-6 bg-[var(--card-bg)] p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style="animation-duration: 3s;">
+                        <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600">
+                            <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-[var(--text-muted)]">Cost Saving</div>
+                            <div class="text-sm font-semibold text-[var(--text-main)]">Wallet Control</div>
+                        </div>
+                    </div>
+
+                    <div class="absolute -bottom-4 -left-4 bg-[var(--card-bg)] p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style="animation-duration: 4s;">
+                        <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600">
+                            <i data-lucide="box" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-[var(--text-muted)]">Real-Time</div>
+                            <div class="text-sm font-semibold text-[var(--text-main)]">Smart Inventory</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trust Strip -->
+        <section class="border-y border-[var(--card-border)] bg-[var(--bg-body)]/50 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-6 py-10 text-center">
+                <p class="text-xs font-medium uppercase tracking-widest text-[var(--text-muted)] mb-8">Trusted by sellers across major platforms</p>
+                <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                    <!-- Logo Placeholders using Text for accuracy as requested -->
+                    <span class="text-xl font-bold tracking-tight font-sans text-[var(--text-main)]">shopify</span>
+                    <span class="text-xl font-bold tracking-tight font-serif italic text-[var(--text-main)]">Etsy</span>
+                    <span class="text-xl font-bold tracking-tight text-[var(--text-main)]">WooCommerce</span>
+                    <span class="text-xl font-bold tracking-tight text-[var(--text-main)] flex items-center gap-1"><i data-lucide="music-2" class="w-5 h-5"></i> TikTok Shop</span>
+                    <span class="text-xl font-bold tracking-tight text-[var(--text-main)] flex items-center gap-1">amazon</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Problem / Solution -->
+        <section id="solutions" class="py-24 max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text-main)] mb-4">
+                    Fulfillment is more than shipping<br class="hidden md:block">
+                    <span class="text-[var(--text-muted)]">it’s an operational system.</span>
+                </h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="reveal p-8 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:shadow-lg transition-shadow">
+                    <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-500 flex items-center justify-center mb-4">
+                        <i data-lucide="x-circle" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-[var(--text-main)] mb-2">The Problem</h3>
+                    <p class="text-[var(--text-muted)] text-sm mb-6">Manual order handling and slow production cycles.</p>
+                    <div class="h-px bg-[var(--card-border)] w-full mb-6"></div>
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 mt-0.5"></i>
+                        <div>
+                            <h4 class="text-sm font-semibold text-[var(--text-main)]">The Solution</h4>
+                            <p class="text-[var(--text-muted)] text-sm">Automated job-based workflow from order to shipment.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="reveal delay-100 p-8 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:shadow-lg transition-shadow">
+                    <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-500 flex items-center justify-center mb-4">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-[var(--text-main)] mb-2">The Problem</h3>
+                    <p class="text-[var(--text-muted)] text-sm mb-6">Production errors and missing file confusion.</p>
+                    <div class="h-px bg-[var(--card-border)] w-full mb-6"></div>
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 mt-0.5"></i>
+                        <div>
+                            <h4 class="text-sm font-semibold text-[var(--text-main)]">The Solution</h4>
+                            <p class="text-[var(--text-muted)] text-sm">QR-based production system with zero guesswork.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="reveal delay-200 p-8 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:shadow-lg transition-shadow">
+                    <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-500 flex items-center justify-center mb-4">
+                        <i data-lucide="trending-down" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-[var(--text-main)] mb-2">The Problem</h3>
+                    <p class="text-[var(--text-muted)] text-sm mb-6">Unclear costs and difficult profit tracking.</p>
+                    <div class="h-px bg-[var(--card-border)] w-full mb-6"></div>
+                    <div class="flex items-start gap-3">
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 mt-0.5"></i>
+                        <div>
+                            <h4 class="text-sm font-semibold text-[var(--text-main)]">The Solution</h4>
+                            <p class="text-[var(--text-muted)] text-sm">Transparent wallet, cost, and revenue reporting.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Features Grid -->
+        <section id="features" class="py-24 bg-brand-50/50 dark:bg-brand-950/20 border-y border-[var(--card-border)]">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="mb-16 md:w-2/3 reveal">
+                    <h2 class="text-3xl font-semibold tracking-tight text-[var(--text-main)] mb-4">Everything you need to run<br>fulfillment at scale</h2>
+                    <p class="text-[var(--text-muted)]">Powerful tools designed for high-volume sellers and precise inventory control.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Feature Items -->
+                    <div class="reveal group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">Excel Order Import</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Bulk upload thousands of orders in seconds with auto-validation.</p>
+                    </div>
+
+                    <div class="reveal delay-100 group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="wallet" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">Prepaid Wallet Control</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Manage costs instantly. No surprise charges at the end of the month.</p>
+                    </div>
+
+                    <div class="reveal delay-200 group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="scan-line" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">QR Production Tracking</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Stick, scan, and update. Eliminate errors on the factory floor.</p>
+                    </div>
+
+                    <div class="reveal delay-300 group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="layers" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">Smart Inventory</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Real-time stock syncing across all your integrated stores.</p>
+                    </div>
+
+                    <div class="reveal delay-400 group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="globe-2" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">US &amp; Canada Shipping</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Fast, reliable carriers integrated directly into the dashboard.</p>
+                    </div>
+
+                    <div class="reveal delay-500 group p-6 bg-[var(--bg-body)] rounded-xl border border-[var(--card-border)] hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-10 h-10 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-[var(--text-main)] mb-2">Real-Time Reporting</h3>
+                        <p class="text-sm text-[var(--text-muted)]">Visualize your fulfillment velocity and profit margins.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QR Sticker Highlight -->
+        <section class="py-24 max-w-7xl mx-auto px-6">
+            <div class="bg-[var(--card-main)] dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-950 rounded-3xl border border-[var(--card-border)] overflow-hidden">
+                <div class="grid lg:grid-cols-2">
+                    <div class="p-10 lg:p-16 flex flex-col justify-center reveal">
+                        <div class="inline-flex items-center gap-2 text-brand-600 dark:text-brand-400 font-medium text-sm mb-4">
+                            <i data-lucide="qr-code" class="w-4 h-4"></i>
+                            Precision Production
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-semibold text-[var(--text-main)] mb-6 tracking-tight">Dual QR Code Stickers for Error-Free Production</h2>
+                        <p class="text-[var(--text-muted)] mb-8 text-lg">Reduce production mistakes, speed up workflows, and maintain full operational visibility with our proprietary dual-scan system.</p>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                                <div>
+                                    <h4 class="font-semibold text-[var(--text-main)]">QR File Access</h4>
+                                    <p class="text-sm text-[var(--text-muted)]">Scan to instantly open embroidery or design files for the machine.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/50 text-accent-600 flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                                <div>
+                                    <h4 class="font-semibold text-[var(--text-main)]">QR Status Update</h4>
+                                    <p class="text-sm text-[var(--text-muted)]">Scan twice to update job status (In Process → Completed).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Side -->
+                    <div class="bg-zinc-100 dark:bg-black/50 p-10 lg:p-16 flex items-center justify-center relative overflow-hidden">
+                         <div class="absolute inset-0 bg-grid opacity-50"></div>
+                         
+                         <!-- Sticker Mockup -->
+                         <div class="relative w-80 h-48 bg-white text-black rounded-lg shadow-2xl p-4 flex flex-col justify-between transform rotate-1 hover:rotate-0 transition-transform duration-500 reveal delay-200">
+                             <div class="flex justify-between items-start border-b border-gray-100 pb-2">
+                                 <div>
+                                     <div class="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Order ID</div>
+                                     <div class="text-xl font-mono font-bold">#9821-XP</div>
+                                 </div>
+                                 <div class="text-xs font-bold bg-black text-white px-2 py-1 rounded">PRIORITY</div>
+                             </div>
+                             
+                             <div class="flex gap-4 items-end">
+                                 <div class="flex-1">
+                                     <div class="text-[10px] text-gray-400 mb-1">DESIGN FILE</div>
+                                     <!-- CSS QR Code Simulation -->
+                                     <div class="w-16 h-16 bg-white border border-gray-200 p-1">
+                                        <div class="w-full h-full bg-black qr-pattern opacity-90"></div>
+                                     </div>
+                                 </div>
+                                 <div class="flex-1">
+                                     <div class="text-[10px] text-gray-400 mb-1">STATUS UPDATE</div>
+                                     <!-- CSS QR Code Simulation -->
+                                     <div class="w-16 h-16 bg-white border border-gray-200 p-1">
+                                         <div class="w-full h-full bg-black qr-pattern opacity-90"></div>
+                                     </div>
+                                 </div>
+                             </div>
+                             
+                             <div class="text-[9px] text-gray-300 text-center mt-2 tracking-widest">
+                                 [BRAND_NAME] FULFILLMENT SYSTEM
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Workflow Timeline -->
+        <section id="workflow" class="py-24 bg-zinc-50 dark:bg-zinc-900/30 border-y border-[var(--card-border)]">
+            <div class="max-w-6xl mx-auto px-6">
+                <div class="text-center mb-16 reveal">
+                    <h2 class="text-3xl font-semibold text-[var(--text-main)] mb-4">A simple, scalable workflow</h2>
+                    <p class="text-[var(--text-muted)]">From dashboard to doorstep in 6 automated steps.</p>
+                </div>
+
+                <div class="relative">
+                    <!-- Connecting Line (Desktop) -->
+                    <div class="hidden lg:block absolute top-1/2 left-0 w-full h-0.5 bg-[var(--card-border)] -translate-y-1/2 z-0"></div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 relative z-10">
+                        <!-- Step 1 -->
+                        <div class="reveal relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-brand-500 text-brand-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform">1</div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">Wallet Top-up</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">Secure prepaid funding.</p>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="reveal delay-100 relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">2</div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">Import Orders</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">Excel or API sync.</p>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="reveal delay-200 relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">3</div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">Processing</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">System creates jobs.</p>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="reveal delay-300 relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">4</div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">QR Printing</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">Dual stickers generated.</p>
+                        </div>
+
+                        <!-- Step 5 -->
+                        <div class="reveal delay-400 relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">5</div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">Production</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">Scan &amp; Create.</p>
+                        </div>
+
+                        <!-- Step 6 -->
+                        <div class="reveal delay-500 relative flex flex-col items-center text-center group">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-emerald-500 text-emerald-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform"><i data-lucide="check" class="w-5 h-5"></i></div>
+                            <h4 class="font-semibold text-sm text-[var(--text-main)]">Shipping</h4>
+                            <p class="text-xs text-[var(--text-muted)] mt-2 px-2">Tracking sent instantly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Integrations & Pricing Teaser -->
+        <section id="pricing" class="py-24 max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-2 gap-8 mb-8">
+                <!-- Integration Box -->
+                <div class="reveal p-8 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl relative overflow-hidden">
+                    <div class="absolute inset-0 bg-black/10"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-2xl font-bold mb-2">Built for Integrations</h3>
+                        <p class="text-indigo-100 mb-6 max-w-sm">Connect your store or use our robust API for custom solutions.</p>
+                        <div class="flex gap-4 mb-8">
+                            <div class="bg-white/20 backdrop-blur rounded p-2"><i data-lucide="plug" class="w-6 h-6"></i></div>
+                            <div class="bg-white/20 backdrop-blur rounded p-2"><i data-lucide="code" class="w-6 h-6"></i></div>
+                            <div class="bg-white/20 backdrop-blur rounded p-2"><i data-lucide="truck" class="w-6 h-6"></i></div>
+                        </div>
+                        <p class="text-xs text-indigo-200 opacity-80">API-based integrations can be enabled in phases as your business scales.</p>
+                    </div>
+                </div>
+
+                <!-- Pricing Box -->
+                <div class="reveal delay-100 p-8 rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] flex flex-col justify-center text-center">
+                    <h3 class="text-2xl font-bold text-[var(--text-main)] mb-2">Flexible Pricing</h3>
+                    <p class="text-[var(--text-muted)] mb-8">We don't charge monthly subscription fees. Pricing is based purely on order volume and product type.</p>
+                    <button class="mx-auto px-6 py-3 rounded-full border border-[var(--card-border)] text-[var(--text-main)] hover:border-brand-500 hover:text-brand-600 transition-colors font-medium text-sm">
+                        Get a Custom Quote
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="py-16 bg-[var(--bg-body)]">
+            <div class="max-w-3xl mx-auto px-6 text-center reveal">
+                <div class="mb-6 flex justify-center text-yellow-400 gap-1">
+                    <i data-lucide="star" class="w-5 h-5 fill-current"></i>
+                    <i data-lucide="star" class="w-5 h-5 fill-current"></i>
+                    <i data-lucide="star" class="w-5 h-5 fill-current"></i>
+                    <i data-lucide="star" class="w-5 h-5 fill-current"></i>
+                    <i data-lucide="star" class="w-5 h-5 fill-current"></i>
+                </div>
+                <h3 class="text-xl md:text-2xl font-medium text-[var(--text-main)] mb-6">"This system streamlined our production and reduced errors dramatically. Scaling from 20 to 200 orders per day became manageable."</h3>
+                <p class="text-sm font-semibold text-[var(--text-muted)]">— Director of Operations, Apparel Co.</p>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="py-24 px-6">
+            <div class="max-w-5xl mx-auto rounded-3xl bg-[var(--text-main)] text-[var(--bg-body)] px-6 py-16 md:py-20 text-center relative overflow-hidden reveal">
+                <!-- Decorative background elements -->
+                <div class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-brand-500 rounded-full blur-3xl"></div>
+                    <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-accent-500 rounded-full blur-3xl"></div>
+                </div>
+                
+                <div class="relative z-10">
+                    <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-6">Ready to streamline your<br>fulfillment operations?</h2>
+                    <p class="text-lg opacity-80 mb-10 max-w-xl mx-auto">Join the new standard in dropshipping and POD logistics today.</p>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button class="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform">
+                            Request a Demo
+                        </button>
+                        <button class="px-8 py-3.5 rounded-full border border-[var(--bg-body)]/30 hover:bg-[var(--bg-body)]/10 transition-colors text-sm font-medium">
+                            Get a Quote
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[var(--card-border)] bg-[var(--bg-body)] pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-6 h-6 bg-[var(--text-main)] rounded flex items-center justify-center text-[var(--bg-body)] font-bold text-xs">B</div>
+                        <span class="font-semibold text-[var(--text-main)]">[BRAND_NAME]</span>
+                    </div>
+                    <p class="text-sm text-[var(--text-muted)] max-w-xs">
+                        Advanced fulfillment technology for the modern e-commerce entrepreneur.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm text-[var(--text-main)] mb-4">Platform</h4>
+                    <ul class="space-y-2 text-sm text-[var(--text-muted)]">
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Solutions</a></li>
+                        <li><a href="#" class="hover:text-[var(--text-main)]">How it Works</a></li>
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Pricing</a></li>
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Integrations</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm text-[var(--text-main)] mb-4">Company</h4>
+                    <ul class="space-y-2 text-sm text-[var(--text-muted)]">
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Contact</a></li>
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-[var(--text-main)]">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-[var(--card-border)] flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-xs text-[var(--text-muted)]">
+                    © 2023 [BRAND_NAME] Fulfillment. All rights reserved.
+                </div>
+                <div class="flex gap-4">
+                    <a href="#" class="text-[var(--text-muted)] hover:text-[var(--text-main)]"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+                    <a href="#" class="text-[var(--text-muted)] hover:text-[var(--text-main)]"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                    <a href="#" class="text-[var(--text-muted)] hover:text-[var(--text-main)]"><i data-lucide="instagram" class="w-4 h-4"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // Icon Initialization
+        lucide.createIcons();
+
+        // Theme Toggle Logic
+        function setTheme(themeName) {
+            const body = document.body;
+            body.classList.remove('dark', 'gradient-theme'); // Remove all theme classes first
+            
+            if (themeName === 'dark') {
+                body.classList.add('dark');
+            } else if (themeName === 'gradient') {
+                body.classList.add('gradient-theme');
+            }
+            // If light, we just don't add a class as it's default
+        }
+
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+            }
+        }
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 10) {
+                nav.classList.add('shadow-sm');
+                nav.classList.add('bg-[var(--card-bg)]/80');
+            } else {
+                nav.classList.remove('shadow-sm');
+                nav.classList.remove('bg-[var(--card-bg)]/80');
+            }
+        });
+
+        // Intersection Observer for Scroll Animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+
+</body></html>

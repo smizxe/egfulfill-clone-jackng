@@ -18,7 +18,13 @@ export async function POST(request: Request) {
 
         const product = await prisma.$transaction(async (tx) => {
             const newProduct = await tx.product.create({
-                data: { sku, name, isActive: isActive ?? true }
+                data: {
+                    sku,
+                    name,
+                    isActive: isActive ?? true,
+                    shippingRates: body.shippingRates,
+                    extraFees: body.extraFees
+                }
             });
 
             // Iterate provided variants

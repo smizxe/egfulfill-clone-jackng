@@ -11,7 +11,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             // 1. Update Product Info
             const updatedProduct = await tx.product.update({
                 where: { id },
-                data: { name, sku, isActive },
+                data: {
+                    name,
+                    sku,
+                    isActive,
+                    shippingRates: body.shippingRates,
+                    extraFees: body.extraFees
+                },
             });
 
             if (Array.isArray(variants)) {

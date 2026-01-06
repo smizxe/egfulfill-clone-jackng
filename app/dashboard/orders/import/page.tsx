@@ -1,47 +1,171 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Upload, Button, message, Steps, Result, List, Typography } from 'antd';
-import { InboxOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { Card, Upload, Button, message, Steps, Result, Table, Tag, Typography, Alert, Modal } from 'antd';
+import { InboxOutlined, FileExcelOutlined, CheckCircleOutlined, CloseCircleOutlined, WalletOutlined, DollarCircleOutlined, CalculatorOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
+import type { ColumnsType } from 'antd/es/table';
 
 const { Dragger } = Upload;
+const { Text } = Typography;
 
 export default function ImportOrdersPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [uploading, setUploading] = useState(false);
-    const [result, setResult] = useState<any>(null);
 
-    const handleUpload = async () => {
+    // Parsed Data State
+    const [parsedData, setParsedData] = useState<any[]>([]);
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [importResult, setImportResult] = useState<any>(null);
+    const [walletBalance, setWalletBalance] = useState<number>(0);
+
+    const handleFileUpload = async () => {
         const formData = new FormData();
         fileList.forEach((file) => {
-            // Ant Design stores actual file in originFileObj
             formData.append('file', (file.originFileObj || file) as any);
         });
 
         setUploading(true);
-
         try {
-            const res = await fetch('/api/import', {
-                method: 'POST',
-                body: formData,
-            });
-
+            // Step 1: Parse content (Dry Run)
+            const res = await fetch('/api/import', { method: 'POST', body: formData });
             const data = await res.json();
 
-            if (res.ok) {
-                setResult(data);
-                setCurrentStep(2);
-                message.success('Upload successful!');
+            if (res.ok && data.success && data.dryRun) {
+                // Add unique keys for Table
+                const rows = data.parsedOrders.map((o: any, idx: number) => ({
+                    ...o,
+                    key: o.id || o.tempId || `row-${idx}`
+                }));
+                setParsedData(rows);
+                setWalletBalance(data.walletBalance || 0);
+                // Auto-select valid rows
+                const validKeys = rows.filter((r: any) => r.valid).map((r: any) => r.key);
+                setSelectedRowKeys(validKeys);
+
+                setCurrentStep(1); // Move to Review
             } else {
-                message.error(data.error || 'Upload failed.');
+                message.error(data.error || 'Failed to parse file');
             }
         } catch (error) {
-            message.error('Upload failed.');
+            console.error(error);
+            message.error('Network error during upload');
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleConfirmImport = async () => {
+        if (selectedRowKeys.length === 0) {
+            message.warning('Please select at least one order to import');
+            return;
+        }
+
+        // Calculate selected total cost
+        const selectedTotal = parsedData
+            .filter(row => selectedRowKeys.includes(row.key))
+            .reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
+
+        // Check balance (Note: Wallet will deduct only on Admin approval)
+        // This is just a warning/block for now
+        if (selectedTotal > walletBalance) {
+            message.error(`Insufficient wallet balance. Required: $${selectedTotal.toFixed(2)}, Available: $${walletBalance.toFixed(2)}`);
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // Filter selected orders
+            const ordersToImport = parsedData.filter(row => selectedRowKeys.includes(row.key));
+
+            const res = await fetch('/api/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orders: ordersToImport })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                setImportResult({
+                    success: true,
+                    count: data.importedCount,
+                    message: data.message
+                });
+                setCurrentStep(2); // Move to Result
+            } else {
+                message.error(data.error || 'Import failed');
+            }
+        } catch (error) {
+            console.error(error);
+            message.error('Import execution failed');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // Table Columns
+    const columns: ColumnsType<any> = [
+        {
+            title: 'Status',
+            key: 'valid',
+            render: (_, record) => (
+                record.valid ? <Tag color="success">Valid</Tag> : <Tag color="error">Error</Tag>
+            ),
+            width: 80
+        },
+        {
+            title: 'Order ID',
+            dataIndex: 'id',
+            key: 'id',
+            render: (text) => text || <Text type="secondary">(New)</Text>
+        },
+        {
+            title: 'Recipient',
+            dataIndex: 'recipientName',
+            key: 'recipient',
+        },
+        {
+            title: 'Items',
+            key: 'items',
+            render: (_, record) => (
+                <div>
+                    {record.items.map((item: any, idx: number) => (
+                        <div key={idx} className="text-xs">
+                            {item.sku} x{item.qty} ({item.color}/{item.size})
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            title: 'Cost',
+            dataIndex: 'totalCost',
+            key: 'cost',
+            render: (val) => <Text strong type="success">${val ? val.toFixed(2) : '0.00'}</Text>
+        },
+        {
+            title: 'Issues',
+            dataIndex: 'errors',
+            key: 'errors',
+            render: (errors) => (
+                errors && errors.length > 0 ? (
+                    <div className="text-xs text-red-500 max-h-20 overflow-y-auto">
+                        {errors.map((e: string, i: number) => <div key={i}>- {e}</div>)}
+                    </div>
+                ) : <CheckCircleOutlined className="text-green-500" />
+            )
+        }
+    ];
+
+    const rowSelection = {
+        selectedRowKeys,
+        onChange: (newSelectedRowKeys: React.Key[]) => {
+            setSelectedRowKeys(newSelectedRowKeys);
+        },
+        getCheckboxProps: (record: any) => ({
+            disabled: !record.valid, // Disable selection if invalid
+        }),
     };
 
     const props = {
@@ -53,7 +177,6 @@ export default function ImportOrdersPage() {
         },
         beforeUpload: (file: UploadFile) => {
             setFileList([file]);
-            setCurrentStep(1);
             return false;
         },
         fileList,
@@ -67,85 +190,169 @@ export default function ImportOrdersPage() {
                 current={currentStep}
                 className="mb-8"
                 items={[
-                    { title: 'Select File', subTitle: 'Upload Excel' },
-                    { title: 'Review', subTitle: 'Confirm Upload' },
-                    { title: 'Result', subTitle: 'Processing Status' }
+                    { title: 'Upload', subTitle: 'Select File' },
+                    { title: 'Review', subTitle: 'Select Orders' },
+                    { title: 'Result', subTitle: 'Finished' }
                 ]}
             />
 
+            {/* Step 0: Upload */}
             {currentStep === 0 && (
                 <Card title="Upload Excel File">
-                    <Dragger {...props} accept=".xlsx,.xls">
+                    <Dragger {...props} accept=".xlsx,.xls" maxCount={1}>
                         <p className="ant-upload-drag-icon">
                             <InboxOutlined />
                         </p>
-                        <p className="ant-upload-text">Click or drag file to this area to upload</p>
+                        <p className="ant-upload-text">Click or drag file here</p>
                         <p className="ant-upload-hint">
-                            Support for a single or bulk upload. Strictly prohibit from uploading company data or other
-                            band files
+                            Supports Excel files. Design 1 & Position 1 are required.
                         </p>
                     </Dragger>
-                    <div className="mt-4">
-                        <Typography.Text type="secondary">
-                            Required Columns: SKU, Quantity, Name, Phone, Address, City, State, Zip, Country, DesignURL
-                        </Typography.Text>
+                    <Button
+                        type="primary"
+                        onClick={handleFileUpload}
+                        disabled={fileList.length === 0}
+                        loading={uploading}
+                        className="mt-4 w-full"
+                        size="large"
+                    >
+                        Analyze File
+                    </Button>
+
+                    <div className="mt-4 text-gray-500 text-xs">
+                        * Strict Validation Enabled: Design 1 and Position 1 must be present together.
                     </div>
                 </Card>
             )}
 
+            {/* Step 1: Review Table */}
             {currentStep === 1 && (
-                <Card title="Review & Process">
-                    {fileList.map((file) => (
-                        <div key={file.uid} className="flex items-center justify-between p-4 border rounded mb-4 bg-white">
-                            <div className="flex items-center gap-4">
-                                <FileExcelOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
-                                <div>
-                                    <div className="font-medium">{file.name}</div>
-                                    <div className="text-gray-500 text-sm">Ready to process</div>
-                                </div>
+                <Card
+                    title={
+                        <div className="flex justify-between items-center">
+                            <span>Review Orders ({selectedRowKeys.length} selected)</span>
+                            <div>
+                                <span className="mr-4 text-gray-500">
+                                    Total Cost: <span className="text-green-600 font-bold">
+                                        ${parsedData.filter(r => selectedRowKeys.includes(r.key)).reduce((acc, curr) => acc + curr.totalCost, 0).toFixed(2)}
+                                    </span>
+                                </span>
+                                <Button onClick={() => { setCurrentStep(0); setFileList([]); }}>Cancel</Button>
+                                <Button type="primary" className="ml-2" onClick={handleConfirmImport} loading={uploading}>
+                                    Import Selected
+                                </Button>
                             </div>
-                            <Button danger onClick={() => { setFileList([]); setCurrentStep(0); }}>
-                                Remove
-                            </Button>
                         </div>
-                    ))}
-                    <Button
-                        type="primary"
-                        onClick={handleUpload}
-                        loading={uploading}
-                        className="mt-4"
-                        style={{ width: '100%' }}
-                        size="large"
-                    >
-                        Process Import
-                    </Button>
+                    }
+                >
+                    <div className="mb-8">
+                        <Alert
+                            title="Check the orders you want to import. Invalid orders cannot be selected."
+                            type="info"
+                            showIcon
+                        />
+                    </div>
+
+                    {/* Balance & Stats Cards */}
+                    {(() => {
+                        const selectedTotal = parsedData.filter(r => selectedRowKeys.includes(r.key)).reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
+                        const isInsufficient = selectedTotal > walletBalance;
+                        const remaining = walletBalance - selectedTotal;
+
+                        return (
+                            <div className="mb-6 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Wallet Balance Card */}
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between">
+                                        <div>
+                                            <p className="text-gray-500 text-xs uppercase font-semibold tracking-wider">Wallet Balance</p>
+                                            <p className={`text-2xl font-bold ${walletBalance === 0 ? 'text-red-500' : 'text-gray-800'}`}>
+                                                ${walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 bg-blue-50 rounded-full text-blue-600">
+                                            <WalletOutlined style={{ fontSize: '24px' }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Selected Cost Card */}
+                                    <div className={`p-4 rounded-lg border shadow-sm flex items-center justify-between ${isInsufficient ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+                                        <div>
+                                            <p className="text-gray-500 text-xs uppercase font-semibold tracking-wider">Selected Total</p>
+                                            <p className={`text-2xl font-bold ${isInsufficient ? 'text-red-600' : 'text-blue-600'}`}>
+                                                ${selectedTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className={`p-3 rounded-full ${isInsufficient ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                                            <DollarCircleOutlined style={{ fontSize: '24px' }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Remaining Card */}
+                                    <div className={`p-4 rounded-lg border shadow-sm flex items-center justify-between ${remaining < 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+                                        <div>
+                                            <p className="text-gray-500 text-xs uppercase font-semibold tracking-wider">Remaining (Est)</p>
+                                            <p className={`text-2xl font-bold ${remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                        <div className={`p-3 rounded-full ${remaining < 0 ? 'bg-red-100 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                            <CalculatorOutlined style={{ fontSize: '24px' }} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {isInsufficient && (
+                                    <Alert
+                                        message={<span className="font-bold">Insufficient Balance</span>}
+                                        description="You do not have enough funds to proceed with this import. Please top up your wallet or deselect some orders to proceed."
+                                        type="error"
+                                        showIcon
+                                        className="border-red-200 bg-red-50"
+                                    />
+                                )}
+                            </div>
+                        );
+                    })()}
+                    <Table
+                        dataSource={parsedData}
+                        columns={columns}
+                        rowSelection={rowSelection}
+                        pagination={{ pageSize: 10 }}
+                        size="small"
+                        rowClassName={(record) => !record.valid ? 'bg-red-50' : ''}
+                    />
                 </Card>
             )}
 
-            {currentStep === 2 && result && (
+            {/* Step 2: Result */}
+            {currentStep === 2 && importResult && (
                 <Card>
                     <Result
                         status="success"
-                        title="Only processed successfully!"
-                        subTitle={`Imported ${result.importedCount} orders. Total processed: ${result.totalRows}`}
+                        title="Import Successful!"
+                        subTitle={`Created ${importResult.count} orders. Status: PENDING_APPROVAL.`}
                         extra={[
-                            <Button type="primary" key="console" onClick={() => { setFileList([]); setCurrentStep(0); setResult(null); }}>
-                                Import Another
-                            </Button>,
+                            <Button type="primary" key="console" onClick={() => {
+                                setCurrentStep(0);
+                                setFileList([]);
+                                setParsedData([]);
+                                setSelectedRowKeys([]);
+                            }}>
+                                Import More
+                            </Button>
                         ]}
-                    />
-                    {result.errors && result.errors.length > 0 && (
-                        <div className="mt-4">
-                            <Typography.Title level={5} type="danger">Errors:</Typography.Title>
-                            <div className="border rounded p-4 bg-red-50">
-                                {result.errors.map((error: any, index: number) => (
-                                    <div key={index} className="py-1 text-red-600 border-b last:border-0 border-red-100">
-                                        {error}
-                                    </div>
-                                ))}
-                            </div>
+                    >
+                        <div className="desc">
+                            <Text>
+                                <CheckCircleOutlined style={{ color: '#52c41a' }} /> Your orders have been created and are waiting for Admin Approval.
+                            </Text>
+                            <br />
+                            <Text type="secondary" className="ml-5">
+                                Note: Wallet will be deducted only when Admin approves the order.
+                            </Text>
                         </div>
-                    )}
+                    </Result>
                 </Card>
             )}
         </div>

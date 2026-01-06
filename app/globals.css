@@ -1,27 +1,155 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), sans-serif;
+  --font-mono: monospace;
+
+  /* Brand Colors */
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-900: #0c4a6e;
+
+  /* Accent Colors */
+  --color-accent-500: #6366f1;
+
+  /* Animations */
+  --animate-blob: blob 10s infinite;
+  --animate-fade-up: fadeUp 0.8s ease-out forwards;
+  --animate-spin-slow: spin 12s linear infinite;
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  @keyframes fadeUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-/* Dark mode disabled for Admin Dashboard compatibility */
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
+/* Base Variables for Theming */
+:root {
+  --background: #ffffff;
+  --foreground: #18181b;
+
+  --bg-body: #ffffff;
+  --text-main: #18181b;
+  --text-muted: #71717a;
+  --card-bg: #ffffff;
+  --card-border: #e4e4e7;
+  --blob-opacity: 0.4;
+  --card-main: #ffffff;
+  /* Fallback */
+}
+
+/* Dark Theme Variables */
+.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+
+  --bg-body: #09090b;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --card-bg: #18181b;
+  --card-border: #27272a;
+  --blob-opacity: 0.2;
+  --card-main: #09090b;
+  /* Fallback for card main if used */
+}
+
+/* Gradient Theme Variables */
+.gradient-theme {
+  --bg-body: #f8fafc;
+  --text-main: #0f172a;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(255, 255, 255, 0.5);
+}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  transition: background-color 0.5s ease, color 0.3s ease;
+}
+
+/* Utility Classes */
+.glass-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #0ea5e9, #6366f1);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+/* QR Code Pattern Simulation */
+.qr-pattern {
+  background-image: radial-gradient(#000 40%, transparent 40%);
+  background-size: 8px 8px;
+}
+
+/* Reveal on Scroll Class */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+}
+
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Grid Background Pattern */
+.bg-grid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
 }

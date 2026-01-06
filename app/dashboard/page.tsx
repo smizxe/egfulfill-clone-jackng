@@ -55,7 +55,24 @@ export default async function DashboardPage() {
 
     // Data Selection for Dashboard
     const orders = user.seller?.orders || [];
-    const balance = user.seller?.wallet?.balance || 0;
+
+    // Ensure wallet exists (create if missing)
+    let balance = 0;
+    if (user.seller) {
+        if (!user.seller.wallet) {
+            // Create wallet if it doesn't exist
+            await prisma.wallet.create({
+                data: {
+                    sellerId: user.seller.id,
+                    balance: 0,
+                    currency: 'USD'
+                }
+            });
+            balance = 0;
+        } else {
+            balance = user.seller.wallet.balance;
+        }
+    }
 
     // Calculate Stats
     const orderCount = orders.length;

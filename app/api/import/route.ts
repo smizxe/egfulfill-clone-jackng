@@ -2,14 +2,131 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
+import { cookies } from 'next/headers';
 
 // Helper to generate secure random token
 function generateToken() {
     return uuidv4().replace(/-/g, '') + Math.random().toString(36).substring(2, 8);
 }
 
+// Helper to normalize keys
+const normalizeKey = (key: string) => key.trim().toLowerCase().replace(/[\s_-]+/g, '');
+
 export async function POST(request: Request) {
     try {
+        const contentType = request.headers.get('content-type') || '';
+
+        // --- MODE 2: CREATE ORDERS (JSON) ---
+        if (contentType.includes('application/json')) {
+            const body = await request.json();
+            const { orders } = body; // Array of validated order objects
+
+            if (!orders || !Array.isArray(orders) || orders.length === 0) {
+                return NextResponse.json({ error: 'No orders provided' }, { status: 400 });
+            }
+
+            // Authentication - Get logged-in user from cookies
+            const cookieStore = await cookies();
+            const userId = cookieStore.get('userId')?.value;
+            if (!userId) {
+                return NextResponse.json({ error: 'Not authenticated. Please login.' }, { status: 401 });
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                include: { seller: { include: { wallet: true } } }
+            });
+
+            if (!user || !user.seller) {
+                return NextResponse.json({ error: 'Seller account not found' }, { status: 401 });
+            }
+            const sellerId = user.seller.id;
+
+            // Execute Creation Transaction (NO WALLET DEDUCTION)
+            const transactionResult = await prisma.$transaction(async (tx) => {
+                const createdOrderCodes: string[] = [];
+
+                for (const orderData of orders) {
+                    // Create Order
+                    // Ensure unique orderCode or generate one logic
+                    // Use Order ID if provided, else generate
+                    let finalOrderCode = '';
+                    if (orderData.id && !String(orderData.id).startsWith('TEMP-')) {
+                        finalOrderCode = `ORDER${orderData.id}-${uuidv4().substring(0, 6).toUpperCase()}`;
+                    } else {
+                        finalOrderCode = `ORDER${Date.now()}-${uuidv4().substring(0, 6).toUpperCase()}`;
+                    }
+
+                    const newOrder = await tx.order.create({
+                        data: {
+                            orderCode: finalOrderCode,
+                            sellerId,
+                            status: 'PENDING_APPROVAL',
+                            totalAmount: orderData.totalCost || 0,
+                            trackingNumber: '',
+                            shippingMethod: 'STANDARD',
+                            shippingCountry: orderData.country,
+                        }
+                    });
+
+                    createdOrderCodes.push(finalOrderCode);
+
+                    // Create Jobs (Items)
+                    for (const item of orderData.items) {
+                        const jobCode = 'JOB' + uuidv4().substring(0, 8).toUpperCase();
+                        const newJob = await tx.job.create({
+                            data: {
+                                orderId: newOrder.id,
+                                sellerId,
+                                jobCode,
+                                status: 'PENDING_APPROVAL',
+                                sku: item.sku,
+                                color: item.color,
+                                size: item.size,
+                                qty: item.qty,
+                                // Snapshot recipient info to job as well (as per schema usage)
+                                recipientName: orderData.recipientName,
+                                address1: orderData.address1,
+                                address2: orderData.address2,
+                                city: orderData.city,
+                                state: orderData.state,
+                                zip: orderData.zip,
+                                country: orderData.country,
+                                phone: orderData.phone,
+                                designs: item.designs, // JSON string already
+                                notes: item.notes,
+                                priceToCharge: item.priceToCharge,
+                            }
+                        });
+
+                        // QR Tokens
+                        await tx.qrToken.create({
+                            data: { jobId: newJob.id, type: 'FILE', token: generateToken() }
+                        });
+                        await tx.qrToken.create({
+                            data: { jobId: newJob.id, type: 'STATUS', token: generateToken(), maxUses: 2 }
+                        });
+
+                        // Inventory Logic
+                        await tx.inventoryItem.upsert({
+                            where: { sku_color_size: { sku: item.sku, color: item.color || "", size: item.size || "" } },
+                            update: { reserved: { increment: item.qty } },
+                            create: { sku: item.sku, color: item.color || "", size: item.size || "", reserved: item.qty, onHand: 0 }
+                        });
+                    }
+                }
+                return { count: createdOrderCodes.length };
+            });
+
+            return NextResponse.json({
+                success: true,
+                message: `Successfully created ${transactionResult.count} orders. Waiting for Admin Approval.`,
+                importedCount: transactionResult.count
+            });
+        }
+
+
+        // --- MODE 1: PARSE FILE (Multipart) ---
         const formData = await request.formData();
         const file = formData.get('file') as File;
 
@@ -23,276 +140,261 @@ export async function POST(request: Request) {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        // Use raw:true to avoid date parsing issues
         const rawJson = XLSX.utils.sheet_to_json(sheet, { raw: true, defval: "" });
 
-        // Normalize keys directly: lowercase and trim
         const rawData = rawJson.map((row: any) => {
             const newRow: any = {};
             Object.keys(row).forEach(key => {
-                newRow[key.trim().toLowerCase()] = row[key];
+                newRow[normalizeKey(key)] = row[key];
             });
             return newRow;
         });
 
-        const errors: string[] = [];
-        const jobsToCreate: any[] = [];
-        let totalBatchCost = 0;
+        // Authentication - Get logged-in user from cookies
+        const cookieStore = await cookies();
+        const userId = cookieStore.get('userId')?.value;
+        if (!userId) {
+            return NextResponse.json({ error: 'Not authenticated. Please login.' }, { status: 401 });
+        }
 
-        // 1. Identify Seller 
-        const user = await prisma.user.findFirst({
-            where: { role: 'SELLER' },
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
             include: { seller: { include: { wallet: true } } }
         });
 
-        if (!user || !user.seller || !user.seller.wallet) {
-            return NextResponse.json({ error: 'Authentication failed. No valid Seller/Wallet found.' }, { status: 401 });
-        }
+        if (!user || !user.seller) return NextResponse.json({ error: 'Seller account not found' }, { status: 401 });
 
-        const sellerId = user.seller.id;
-        const walletId = user.seller.wallet.id;
-        const currentBalance = user.seller.wallet.balance;
-
-        // Cache products 
+        const errors: string[] = [];
+        const orderGroups = new Map<string, any[]>();
         const productsCache: Record<string, any> = {};
 
-        for (const [index, row] of rawData.entries()) {
+        // Grouping
+        rawData.forEach((r: any, index: number) => {
             const rowIndex = index + 2;
-            const r = row as any;
+            const row = { ...r, _rowIndex: rowIndex };
+            let extOrderId = String(r['orderid'] || r['ordernumber'] || r['externalid'] || '').trim();
 
-            let sku = String(r['sku'] || r['product sku'] || '').trim();
-            const color = String(r['color'] || '').trim();
-            const size = String(r['size'] || '').trim();
-            const qtyStr = String(r['qty'] || r['quantity'] || '0').trim();
-            const qty = parseInt(qtyStr, 10);
-
-            const recipientName = String(r['recipient_name'] || r['shipping name'] || '').trim();
-            const phone = String(r['phone'] || r['shipping phone'] || '').trim();
-
-            // Address Handling
-            let address1 = String(r['address1'] || '').trim();
-            let city = String(r['city'] || '').trim();
-            let state = String(r['state'] || r['shipping province'] || '').trim();
-            let zip = String(r['zip'] || r['shipping zip'] || '').trim();
-            let country = String(r['country'] || r['shipping country'] || '').trim();
-
-            const rawAddress = String(r['shipping address'] || '').trim();
-            if (rawAddress && !address1) {
-                const parts = rawAddress.split(',').map(p => p.trim());
-                if (parts.length >= 4) {
-                    address1 = parts[0];
-                    city = parts[1];
-                    state = parts[2];
-                    zip = parts[3];
-                    if (parts.length >= 5) country = parts[4];
-                } else {
-                    address1 = parts[0];
-                    if (parts[1]) city = parts[1];
-                    if (parts[2]) state = parts[2];
-                }
+            if (extOrderId) {
+                if (!orderGroups.has(extOrderId)) orderGroups.set(extOrderId, []);
+                orderGroups.get(extOrderId)!.push(row);
+            } else {
+                const tempId = `TEMP-${uuidv4()}`;
+                orderGroups.set(tempId, [row]);
             }
+        });
 
-            if (!country) country = 'US';
+        const parsedOrders: any[] = [];
+        let totalBatchCost = 0;
 
-            // Handle Designs (Multi-location)
-            const designs = [];
-            // Check legacy first
-            const legacyLink = String(r['embroidery_file_link'] || r['design link'] || '').trim();
-            if (legacyLink) {
-                designs.push({ url: legacyLink, location: 'Legacy/Front' });
-            }
+        for (const [extOrderId, rows] of orderGroups) {
+            const firstRow = rows[0];
+            // Extract Headers
+            const recipientName = String(firstRow['recipientname'] || firstRow['shippingname'] || '').trim();
+            const address1 = String(firstRow['address1'] || '').trim();
+            const city = String(firstRow['city'] || '').trim();
+            const state = String(firstRow['state'] || firstRow['shippingprovince'] || '').trim();
+            const zip = String(firstRow['zip'] || firstRow['shippingzip'] || '').trim();
+            let country = String(firstRow['country'] || firstRow['shippingcountry'] || '').trim();
+            const phone = String(firstRow['phone'] || firstRow['shippingphone'] || '').trim();
+            const address2 = String(firstRow['address2'] || '').trim();
 
-            // Check indexed columns 1-4
-            for (let i = 1; i <= 4; i++) {
-                const url = String(r[`design ${i}`] || r[`design ${i} link`] || r[`embroidery ${i}`] || '').trim();
-                const loc = String(r[`design ${i} location`] || r[`location ${i}`] || '').trim();
+            // Address Consolidation Logic
+            let finalAddress1 = address1;
+            let finalCity = city;
+            let finalState = state;
+            let finalZip = zip;
+            let finalCountry = country;
 
-                if (url) {
-                    // Avoid duplicates if legacy link matches
-                    if (!designs.find(d => d.url === url)) {
-                        designs.push({ url, location: loc || `Pos ${i}` });
+            if (!finalAddress1) {
+                // Try raw address
+                const rawAddress = String(firstRow['shippingaddress'] || '').trim();
+                if (rawAddress) {
+                    const parts = rawAddress.split(',').map(p => p.trim());
+                    if (parts.length >= 3) {
+                        finalAddress1 = parts[0];
+                        if (parts.length === 3) { finalCity = parts[1]; finalState = parts[2]; } // Addr, City, State? simplified
+                        else if (parts.length >= 4) { finalCity = parts[1]; finalState = parts[2]; finalZip = parts[3]; }
+                        if (parts.length >= 5) finalCountry = parts[4];
+                    } else {
+                        finalAddress1 = rawAddress;
                     }
                 }
             }
+            if (!finalCountry) finalCountry = 'US';
 
-            // Basic Validation
-            if (!sku) { errors.push(`Row ${rowIndex}: Missing SKU`); continue; }
-            if (qty <= 0) { errors.push(`Row ${rowIndex}: Qty must be > 0`); continue; }
-            if (!recipientName) { errors.push(`Row ${rowIndex}: Missing Recipient`); continue; }
-            if (!address1) { errors.push(`Row ${rowIndex}: Missing Address`); continue; }
-            if (designs.length === 0) { errors.push(`Row ${rowIndex}: No Design Links found`); continue; }
 
-            // Find Product/Variant Logic
-            let product = productsCache[sku];
-            if (!product) {
-                product = await prisma.product.findUnique({
-                    where: { sku },
-                    include: { variants: true }
-                });
-                if (product) productsCache[sku] = product;
-            }
+            const orderItems = [];
+            let orderCost = 0;
+            let orderValid = true;
+            const orderErrors: string[] = [];
 
-            if (!product) {
-                errors.push(`Row ${rowIndex}: Product SKU '${sku}' not found`);
-                continue;
-            }
+            // Required Fields Check
+            if (!recipientName) orderErrors.push('Missing Recipient Name');
+            if (!finalAddress1) orderErrors.push('Missing Address 1');
+            if (!finalCity) orderErrors.push('Missing City');
+            if (!finalState) orderErrors.push('Missing State');
+            if (!finalZip) orderErrors.push('Missing Zip');
+            if (!finalCountry) orderErrors.push('Missing Country');
 
-            let price = 0;
-            let cogs = 0;
-            // Strict variant matching
-            if (product.variants && product.variants.length > 0) {
+            for (const row of rows) {
+                const sku = String(row['sku'] || row['productsku'] || '').trim();
+                const color = String(row['color'] || '').trim();
+                const size = String(row['size'] || '').trim();
+                const qty = parseInt(String(row['qty'] || row['quantity'] || '0').trim());
+                const rowIndex = row._rowIndex;
+
+                if (!sku) { orderErrors.push(`Row ${rowIndex}: Missing SKU`); continue; }
+                if (qty <= 0) { orderErrors.push(`Row ${rowIndex}: Qty invalid`); continue; }
+
+                // Retrieve Product
+                let product = productsCache[sku];
+                if (!product) {
+                    product = await prisma.product.findUnique({ where: { sku }, include: { variants: true } });
+                    if (product) productsCache[sku] = product;
+                }
+
+                if (!product) {
+                    orderErrors.push(`Row ${rowIndex}: SKU ${sku} not found`);
+                    continue;
+                }
+
+                // Variant Pricing - Product doesn't have basePrice, only variants do
                 const variant = product.variants.find((v: any) =>
                     (v.color?.toLowerCase() === color.toLowerCase() || (!v.color && !color)) &&
                     (v.size?.toLowerCase() === size.toLowerCase() || (!v.size && !size))
                 );
 
-                if (variant) {
-                    price = variant.basePrice;
-                    cogs = variant.cogsEstimate || 0;
-                } else {
-                    errors.push(`Row ${rowIndex}: Variant ${color}/${size} not found`);
+                if (!variant) {
+                    orderErrors.push(`Row ${rowIndex}: Variant ${color}/${size} not found for SKU ${sku}`);
                     continue;
                 }
-            } else {
-                errors.push(`Row ${rowIndex}: Product variants missing`);
-                continue;
-            }
 
-            const lineCost = price * qty;
-            totalBatchCost += lineCost;
+                const priceToCharge = variant.basePrice || 0;
 
-            jobsToCreate.push({
-                rowIndex,
-                sku, color, size, qty,
-                recipientName, address1, address2: r['address2'], city, state, zip, country, phone,
-                designs: JSON.stringify(designs),
-                priceToCharge: price,
-                cogsEstimate: cogs,
-                product,
-                totalCost: lineCost
-            });
-        }
-
-        if (errors.length > 0) {
-            return NextResponse.json({ success: false, errors }, { status: 400 });
-        }
-
-        if (jobsToCreate.length === 0) {
-            return NextResponse.json({ success: false, errors: ["No valid rows found"] }, { status: 400 });
-        }
-
-        // Check Wallet
-        if (currentBalance < totalBatchCost) {
-            return NextResponse.json({
-                success: false,
-                errors: [`Insufficient wallet balance. Required: $${totalBatchCost.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`]
-            }, { status: 402 });
-        }
-
-        // Transaction
-        const result = await prisma.$transaction(async (tx) => {
-            const orderCode = `ORD-${new Date().toISOString().slice(0, 7).replace(/-/g, '')}-${uuidv4().substring(0, 6).toUpperCase()}`;
-
-            // Create Order - STATUS PENDING_APPROVAL
-            const order = await tx.order.create({
-                data: {
-                    sellerId,
-                    orderCode,
-                    status: 'PENDING_APPROVAL', // Explicitly Pending
-                    totalAmount: totalBatchCost,
-                    shippingCountry: jobsToCreate[0].country,
-                    shippingMethod: 'STANDARD',
-                }
-            });
-
-            // Debit Wallet (Hold Amount)
-            await tx.wallet.update({
-                where: { id: walletId },
-                data: { balance: { decrement: totalBatchCost } }
-            });
-
-            await tx.walletLedger.create({
-                data: {
-                    sellerId,
-                    type: 'DEBIT',
-                    amount: totalBatchCost,
-                    refType: 'ORDER',
-                    refId: order.id,
-                    note: `Import Order ${orderCode} (Pending Approval)`
-                }
-            });
-
-            // Create Jobs
-            for (const jobData of jobsToCreate) {
-                const jobCode = 'JOB' + uuidv4().substring(0, 8).toUpperCase();
-
-                const newJob = await tx.job.create({
-                    data: {
-                        orderId: order.id,
-                        sellerId,
-                        jobCode,
-                        status: 'PENDING_APPROVAL', // Pending
-                        sku: jobData.sku,
-                        color: jobData.color,
-                        size: jobData.size,
-                        qty: jobData.qty,
-                        recipientName: jobData.recipientName,
-                        address1: jobData.address1,
-                        address2: jobData.address2,
-                        city: jobData.city,
-                        state: jobData.state,
-                        zip: jobData.zip,
-                        country: jobData.country,
-                        phone: jobData.phone,
-                        designs: jobData.designs, // New JSON field
-                        priceToCharge: jobData.priceToCharge,
-                    }
-                });
-
-                // Tokens
-                await tx.qrToken.create({
-                    data: { jobId: newJob.id, type: 'FILE', token: generateToken() }
-                });
-
-                await tx.qrToken.create({
-                    data: { jobId: newJob.id, type: 'STATUS', token: generateToken(), maxUses: 2 }
-                });
-
-                // Inventory Update
-                const invSku = jobData.sku;
-                const invColor = jobData.color || "";
-                const invSize = jobData.size || "";
-
-                await tx.inventoryItem.upsert({
-                    where: {
-                        sku_color_size: {
-                            sku: invSku,
-                            color: invColor,
-                            size: invSize
+                // Calculate Shipping Rate based on quantity
+                let shippingCost = 0;
+                if (product.shippingRates) {
+                    try {
+                        const shippingRates = JSON.parse(product.shippingRates);
+                        if (Array.isArray(shippingRates) && shippingRates.length > 0) {
+                            // Find the matching rate tier (rates should be sorted by minQty descending)
+                            const sortedRates = shippingRates.sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0));
+                            for (const tier of sortedRates) {
+                                const tierMinQty = Number(tier.minQty) || 0;
+                                const tierRate = Number(tier.rate) || 0;
+                                if (qty >= tierMinQty && tierRate > 0) {
+                                    shippingCost = tierRate * qty;
+                                    break;
+                                }
+                            }
+                            // If no tier matched, use first tier (lowest qty threshold)
+                            if (shippingCost === 0) {
+                                const fallbackRate = Number(shippingRates[shippingRates.length - 1]?.rate) || 0;
+                                shippingCost = fallbackRate * qty;
+                            }
                         }
-                    },
-                    update: { reserved: { increment: jobData.qty } },
-                    create: {
-                        sku: invSku,
-                        color: invColor,
-                        size: invSize,
-                        reserved: jobData.qty,
-                        onHand: 0
+                    } catch (e) {
+                        console.warn(`Failed to parse shippingRates for SKU ${sku}:`, e);
+                        shippingCost = 0;
                     }
+                }
+
+                // Calculate Extra Fees (add all applicable fees)
+                let extraFeesTotal = 0;
+                if (product.extraFees) {
+                    try {
+                        const extraFees = JSON.parse(product.extraFees);
+                        for (const fee of extraFees) {
+                            // Fee can be per-unit or flat
+                            if (fee.type === 'per_unit') {
+                                extraFeesTotal += fee.surcharge * qty;
+                            } else {
+                                // Flat fee per line item
+                                extraFeesTotal += fee.surcharge;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to parse extraFees for SKU ${sku}`);
+                    }
+                }
+
+                // Total line cost = (base price * qty) + shipping + extra fees
+                // Ensure all values are valid numbers to prevent NaN
+                const safePriceToCharge = Number(priceToCharge) || 0;
+                const safeShippingCost = Number.isFinite(shippingCost) ? shippingCost : 0;
+                const safeExtraFees = Number.isFinite(extraFeesTotal) ? extraFeesTotal : 0;
+                const lineCost = (safePriceToCharge * qty) + safeShippingCost + safeExtraFees;
+
+                console.log(`PRICING DEBUG - SKU: ${sku}, Color: ${color}, Size: ${size}, Qty: ${qty}`);
+                console.log(`  Variant found: ${!!variant}, BasePrice: ${variant?.basePrice}, priceToCharge: ${priceToCharge}`);
+                console.log(`  Shipping: ${shippingCost}, ExtraFees: ${extraFeesTotal}, LineCost: ${lineCost}`);
+
+                // Designs
+                const designs = [];
+                // Legacy
+                const legacyLink = String(row['embroideryfilelink'] || row['designlink'] || '').trim();
+                if (legacyLink) designs.push({ url: legacyLink, location: 'Legacy/Front' });
+
+                // Indexed
+                for (let i = 1; i <= 4; i++) {
+                    const url = String(row[`design${i}`] || row[`design${i}link`] || row[`embroidery${i}`] || '').trim();
+                    const loc = String(row[`position${i}`] || row[`position ${i}`] || row[`design${i}location`] || row[`location${i}`] || '').trim();
+                    const mockup = String(row[`mockup${i}`] || row[`mockuplink${i}`] || row[`mockup`] || row[`mockuplink`] || '').trim();
+                    const type = String(row[`type${i}`] || row[`type`] || '').trim();
+
+                    if (url && !designs.find((d: any) => d.url === url)) {
+                        if (i === 1 && !loc) {
+                            // Strict: If URL exists, Position is required for Position 1 (Actually for all if new schema implies, but user said P1/D1 required)
+                            // User said: Position 1 required.
+                            if (i === 1) orderErrors.push(`Row ${rowIndex}: Position 1 required`);
+                        }
+                        designs.push({ url, location: loc || undefined, mockup, type });
+                    } else if (i === 1 && !url && !legacyLink) {
+                        // Strict: Design 1 Required
+                        orderErrors.push(`Row ${rowIndex}: Design 1 is required`);
+                    }
+                }
+
+                orderItems.push({
+                    sku, color, size, qty,
+                    designs: JSON.stringify(designs),
+                    notes: String(row['notes'] || '').trim(),
+                    priceToCharge,
+                    shippingCost,
+                    extraFeesTotal,
+                    lineCost
                 });
+
+                orderCost += lineCost;
             }
 
-            return { orderCode, totalJobs: jobsToCreate.length };
-        });
+            if (orderErrors.length > 0) orderValid = false;
 
+            parsedOrders.push({
+                id: extOrderId.startsWith('TEMP-') ? null : extOrderId,
+                tempId: extOrderId, // ID to track in frontend
+                recipientName, address1: finalAddress1, address2, city: finalCity, state: finalState, zip: finalZip, country: finalCountry, phone,
+                items: orderItems,
+                totalCost: orderCost,
+                valid: orderValid,
+                errors: orderErrors
+            });
+
+            if (orderValid) totalBatchCost += orderCost;
+        }
+
+        // Return Analysis (Dry Run Mode always for File Upload now)
         return NextResponse.json({
             success: true,
-            message: `Successfully imported ${result.totalJobs} jobs. Order ${result.orderCode} sent for Approval.`,
-            orderCode: result.orderCode
+            dryRun: true,
+            parsedOrders, // Frontend will iterate this to show checkable list
+            totalEstimatedCost: totalBatchCost,
+            balanceSufficient: (user.seller.wallet?.balance || 0) >= totalBatchCost,
+            walletBalance: user.seller.wallet?.balance || 0
         });
 
     } catch (error: any) {
         console.error("Import Error:", error);
-        return NextResponse.json({ error: error.message || 'Failed to process import' }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
     }
 }
