@@ -8,8 +8,7 @@ export async function GET(request: Request) {
                 status: 'RECEIVED'
             },
             include: {
-                order: true,
-                embroideryFile: true
+                order: true
             },
             orderBy: { createdAt: 'desc' },
             take: 100
