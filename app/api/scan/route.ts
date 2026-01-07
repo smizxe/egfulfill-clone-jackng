@@ -24,8 +24,8 @@ export async function POST(request: Request) {
         }
 
         const job = await prisma.job.findFirst({
-            where: { readableId: jobIdStr },
-            include: { embroideryFile: true, product: true } // product might not be directly linked in schema, let me check
+            where: { jobCode: jobIdStr },
+            include: { order: true }
         });
 
         // Note: In schema Job has 'productSku' but relation is not defined to Product directly in logic earlier?
@@ -40,11 +40,11 @@ export async function POST(request: Request) {
         }
 
         if (type === 'FILE') {
-            if (job.embroideryFile?.googleDriveLink) {
+            if (job.embroideryDriveLink) {
                 return NextResponse.json({
                     type: 'FILE',
                     message: 'File found. Opening...',
-                    link: job.embroideryFile.googleDriveLink
+                    url: job.embroideryDriveLink
                 });
             } else {
                 return NextResponse.json({ error: 'No embroidery file linked to this job' }, { status: 404 });
@@ -77,19 +77,26 @@ export async function POST(request: Request) {
                         where: { id: job.id },
                         data: { status: newStatus }
                     }),
-                    prisma.product.update({
-                        where: { id: job.productId! },
+                    prisma.inventoryItem.updateMany({
+                        where: {
+                            sku: job.sku,
+                            color: job.color,
+                            size: job.size
+                        },
                         data: {
-                            stock: { decrement: job.quantity },
-                            reservedStock: { decrement: job.quantity }
+                            onHand: { decrement: job.qty },
+                            reserved: { decrement: job.qty }
                         }
                     }),
-                    prisma.inventoryLog.create({
+                    prisma.inventoryMovement.create({
                         data: {
-                            productId: job.productId!,
-                            quantity: job.quantity,
+                            sku: job.sku,
+                            color: job.color,
+                            size: job.size,
+                            qtyChange: -job.qty,
                             type: 'PRODUCTION_USE',
-                            // userId: 'scanner'
+                            refType: 'JOB',
+                            refId: job.id
                         }
                     })
                     // Note: COGS Accounting entry could be added here
