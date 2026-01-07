@@ -271,6 +271,31 @@ export async function POST(request: Request) {
 
                 const priceToCharge = variant.basePrice || 0;
 
+                // Inventory Check
+                // We need to check if the specific variant is in stock.
+                // Inventory is stored in InventoryItem model.
+                const invKey = `${sku}-${color}-${size}`;
+                // We can't easily cache everything without fetching all, so we'll do best-effort caching or per-item fetch.
+                // Given existing structure fetches product per SKU, we can fetch inventory per SKU/Variant too.
+
+                // Note: To optimize, we could fetch all inventory for the SKU at once when product is loaded, 
+                // but InventoryItem is loose. Let's do a direct find for now as robust check.
+                // Or better, fetch logic:
+
+                let stockLevel = 0;
+                // Try to limit DB calls: only fetch if not in a "inventoryCache" (which we need to define scope for)
+                // But simplified: Just await prisma.inventoryItem
+
+                const inventoryItem = await prisma.inventoryItem.findUnique({
+                    where: { sku_color_size: { sku: sku, color: color || '', size: size || '' } }
+                });
+
+                if (!inventoryItem || inventoryItem.onHand < qty) {
+                    orderErrors.push(`Row ${rowIndex}: Out of Stock (Requested: ${qty}, Available: ${inventoryItem?.onHand || 0})`);
+                } else {
+                    stockLevel = inventoryItem.onHand;
+                }
+
                 // Calculate Shipping Rate based on quantity
                 let shippingCost = 0;
                 if (product.shippingRates) {

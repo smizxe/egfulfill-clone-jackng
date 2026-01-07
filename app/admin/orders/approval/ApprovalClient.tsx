@@ -1,12 +1,42 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Table, Button, Tag, Space, Modal, message, Card, List } from 'antd';
+import { Table, Button, Modal, message, Space } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
-export default function ApprovalClient({ orders }: { orders: any[] }) {
+interface Job {
+    id: string;
+    sku: string;
+    color: string;
+    size: string;
+    qty: number;
+    priceToCharge: number;
+    recipientName: string;
+    city: string;
+    state: string;
+    designs: string; // JSON string
+    designPosition: string;
+    mockupLinks: string | null;
+    designLinks: string | null;
+    status: string;
+}
+
+interface Order {
+    id: string;
+    orderCode: string;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+    jobs: Job[];
+    seller?: {
+        name: string;
+    };
+}
+
+export default function ApprovalClient({ orders: initialOrders }: { orders: any[] }) {
     const router = useRouter();
+    const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [loading, setLoading] = useState(false);
 
     const handleAction = (orderId: string, action: 'APPROVE' | 'REJECT') => {
@@ -27,6 +57,7 @@ export default function ApprovalClient({ orders }: { orders: any[] }) {
                     if (!res.ok) throw new Error(data.error);
 
                     message.success(`Order ${action}D successfully`);
+                    setOrders(prev => prev.filter(o => o.id !== orderId));
                     router.refresh();
                 } catch (error: any) {
                     message.error(error.message);
@@ -37,77 +68,75 @@ export default function ApprovalClient({ orders }: { orders: any[] }) {
         });
     };
 
-    const expandedRowRender = (record: any) => {
+    const expandedRowRender = (record: Order) => {
         return (
-            <div className="bg-gray-50 p-4 rounded">
-                <List
-                    header={<div className="font-bold">Order Items ({record.jobs.length})</div>}
-                    dataSource={record.jobs}
-                    renderItem={(job: any) => {
-                        let designs = [];
+            <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-zinc-200 dark:border-zinc-700">
+                <h4 className="font-bold text-zinc-700 dark:text-zinc-300 mb-3">Order Items ({record.jobs.length})</h4>
+                <div className="space-y-3">
+                    {record.jobs.map((job: Job, index: number) => {
+                        let designs: any[] = [];
                         try {
                             designs = JSON.parse(job.designs || '[]');
                         } catch (e) { designs = []; }
 
                         return (
-                            <List.Item>
-                                <div className="w-full flex justify-between items-start">
-                                    <div>
-                                        <div className="font-semibold">{job.sku} - {job.color}/{job.size}</div>
-                                        <div className="text-sm text-gray-500">Qty: {job.qty} | Price: ${job.priceToCharge}</div>
-                                        <div>Ship to: {job.recipientName}, {job.city}, {job.state}</div>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        {designs.map((d: any, idx: number) => (
-                                            <div key={idx} className="text-xs border p-1 rounded bg-white">
-                                                <span className="font-bold mr-1">{d.location}:</span>
-                                                <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline truncate max-w-[200px] inline-block align-bottom">
-                                                    View Design
-                                                </a>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div key={job.id || index} className="flex flex-col sm:flex-row justify-between items-start gap-4 p-3 bg-white/60 dark:bg-black/40 rounded-lg">
+                                <div>
+                                    <div className="font-semibold text-zinc-800 dark:text-zinc-200">{job.sku} - {job.color}/{job.size}</div>
+                                    <div className="text-sm text-zinc-500 dark:text-zinc-400">Qty: {job.qty} | Price: ${job.priceToCharge}</div>
+                                    <div className="text-sm text-zinc-500 dark:text-zinc-400">Ship to: {job.recipientName}, {job.city}, {job.state}</div>
                                 </div>
-                            </List.Item>
+                                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                                    {designs.map((d: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between gap-2 text-xs border border-zinc-200 dark:border-zinc-700 p-2 rounded bg-white/80 dark:bg-black/20">
+                                            <span className="font-bold text-zinc-700 dark:text-zinc-300">{d.location}:</span>
+                                            <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 underline truncate max-w-[150px]">
+                                                View Design
+                                            </a>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         );
-                    }}
-                />
+                    })}
+                </div>
             </div>
         );
     };
 
     const columns = [
         {
-            title: 'Order Code',
+            title: 'ORDER CODE',
             dataIndex: 'orderCode',
             key: 'orderCode',
-            render: (text: string) => <span className="font-medium">{text}</span>
+            render: (text: string) => <span className="font-bold text-zinc-800 dark:text-zinc-200">{text}</span>
         },
         {
-            title: 'Seller',
+            title: 'SELLER',
             dataIndex: ['seller', 'name'],
             key: 'seller',
+            render: (text: string) => <span className="text-zinc-600 dark:text-zinc-400">{text || 'Unknown'}</span>
         },
         {
-            title: 'Total Items',
+            title: 'ITEMS',
             dataIndex: 'jobs',
             key: 'totalItems',
-            render: (jobs: any[]) => jobs.length
+            render: (jobs: any[]) => <span className="text-zinc-600 dark:text-zinc-400">{jobs.length} items</span>
         },
         {
-            title: 'Total Amount',
+            title: 'TOTAL',
             dataIndex: 'totalAmount',
             key: 'totalAmount',
-            render: (val: number) => `$${val.toFixed(2)}`
+            render: (val: number) => <span className="font-bold text-emerald-600 dark:text-emerald-400">${val.toFixed(2)}</span>
         },
         {
-            title: 'Date',
+            title: 'DATE',
             dataIndex: 'createdAt',
             key: 'createdAt',
-            render: (date: string) => new Date(date).toLocaleDateString()
+            render: (date: string) => <span className="text-zinc-500 dark:text-zinc-500">{new Date(date).toLocaleDateString('en-US')}</span>
         },
         {
-            title: 'Actions',
+            title: 'ACTIONS',
             key: 'action',
             render: (_: any, record: any) => (
                 <Space>
@@ -116,6 +145,7 @@ export default function ApprovalClient({ orders }: { orders: any[] }) {
                         icon={<CheckOutlined />}
                         onClick={() => handleAction(record.id, 'APPROVE')}
                         loading={loading}
+                        className="bg-emerald-500 hover:bg-emerald-600 border-none shadow-md shadow-emerald-500/20"
                     >
                         Approve
                     </Button>
@@ -124,6 +154,7 @@ export default function ApprovalClient({ orders }: { orders: any[] }) {
                         icon={<CloseOutlined />}
                         onClick={() => handleAction(record.id, 'REJECT')}
                         loading={loading}
+                        className="shadow-md shadow-red-500/10"
                     >
                         Reject
                     </Button>
@@ -133,13 +164,23 @@ export default function ApprovalClient({ orders }: { orders: any[] }) {
     ];
 
     return (
-        <Card title="Pending Approval Queue" variant="borderless">
-            <Table
-                columns={columns}
-                dataSource={orders}
-                rowKey="id"
-                expandable={{ expandedRowRender, defaultExpandedRowKeys: [] }}
-            />
-        </Card>
+        <div>
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 dark:from-pink-300 dark:to-purple-400 bg-clip-text text-transparent">
+                    Order Approval
+                </h2>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-1 overflow-hidden">
+                <Table
+                    columns={columns}
+                    dataSource={orders}
+                    rowKey="id"
+                    expandable={{ expandedRowRender, defaultExpandedRowKeys: [] }}
+                    className="glass-table"
+                    pagination={{ pageSize: 10 }}
+                />
+            </div>
+        </div>
     );
 }

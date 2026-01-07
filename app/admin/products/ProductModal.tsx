@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Switch, message, Select, InputNumber, Table, Checkbox, Divider, Button } from 'antd';
+import { Modal, Form, Input, Switch, message, Select, InputNumber, Table, Checkbox, Divider, Button, Upload } from 'antd';
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 
 interface ProductModalProps {
     open: boolean;
@@ -13,6 +14,8 @@ interface ProductModalProps {
 export default function ProductModal({ open, onCancel, onSuccess, product }: ProductModalProps) {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
     const isEdit = !!product;
 
     // Special pricing toggles
@@ -40,6 +43,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     shippingRates: product.shippingRates ? JSON.parse(product.shippingRates) : [],
                     extraFees: product.extraFees ? JSON.parse(product.extraFees) : []
                 });
+                setImageUrl(product.image || null);
                 setCurrentColors(product.colors || []);
                 setCurrentSizes(product.sizes || []);
 
@@ -50,13 +54,10 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     // Detect color adjustments
                     const colorAdj: Record<string, number> = {};
                     const sizeAdj: Record<string, number> = {};
-                    let hasColorDiff = false;
-                    let hasSizeDiff = false;
 
                     product.variants.forEach((v: any) => {
                         const c = v.color || 'Default';
                         const s = v.size || 'Default';
-                        // This is simplified detection - just use 0 for now and let user adjust
                         if (!(c in colorAdj)) colorAdj[c] = 0;
                         if (!(s in sizeAdj)) sizeAdj[s] = 0;
                     });
@@ -67,6 +68,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             } else {
                 form.resetFields();
                 form.setFieldsValue({ isActive: true, colors: [], sizes: [], basePrice: 0 });
+                setImageUrl(null);
                 setCurrentColors([]);
                 setCurrentSizes([]);
                 setColorAdjustments({});
@@ -76,6 +78,30 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             }
         }
     }, [open, product, form]);
+
+    const handleUpload = async (file: File) => {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.url) {
+                setImageUrl(data.url);
+                message.success('Image uploaded successfully');
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            message.error('Upload failed');
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleValuesChange = (changedValues: any, allValues: any) => {
         if ('colors' in changedValues) {
@@ -135,6 +161,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             const payload = {
                 sku: values.sku,
                 name: values.name,
+                image: imageUrl,
                 isActive: values.isActive,
                 variants: variants,
                 shippingRates: JSON.stringify(values.shippingRates || []),
@@ -219,22 +246,48 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                 layout="vertical"
                 onValuesChange={handleValuesChange}
             >
-                <div className="grid grid-cols-2 gap-4">
-                    <Form.Item name="sku" label="SKU" rules={[{ required: true }]}>
-                        <Input placeholder="E.g. TS-001" disabled={isEdit} />
-                    </Form.Item>
-                    <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>
-                        <Input placeholder="New Product" />
-                    </Form.Item>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
-                        <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="$" />
-                    </Form.Item>
-                    <Form.Item name="isActive" label="Status" valuePropName="checked">
-                        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-                    </Form.Item>
+                <div className="flex gap-4">
+                    <div className="w-1/4">
+                        <Form.Item label="Product Image">
+                            <Upload
+                                name="avatar"
+                                listType="picture-card"
+                                className="avatar-uploader"
+                                showUploadList={false}
+                                beforeUpload={(file) => {
+                                    handleUpload(file);
+                                    return false; // Prevent auto upload by antd
+                                }}
+                            >
+                                {imageUrl ? (
+                                    <img src={imageUrl} alt="product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div>
+                                        {uploading ? <LoadingOutlined /> : <PlusOutlined />}
+                                        <div style={{ marginTop: 8 }}>Upload</div>
+                                    </div>
+                                )}
+                            </Upload>
+                        </Form.Item>
+                    </div>
+                    <div className="w-3/4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Form.Item name="sku" label="SKU" rules={[{ required: true }]}>
+                                <Input placeholder="E.g. TS-001" disabled={isEdit} />
+                            </Form.Item>
+                            <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>
+                                <Input placeholder="New Product" />
+                            </Form.Item>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
+                                <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="$" />
+                            </Form.Item>
+                            <Form.Item name="isActive" label="Status" valuePropName="checked">
+                                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+                            </Form.Item>
+                        </div>
+                    </div>
                 </div>
 
                 <Divider>Variants</Divider>

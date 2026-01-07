@@ -62,7 +62,7 @@ export default function ShippingPage() {
             setOrders(data.orders || []);
             setIsSandbox(data.isSandbox);
         } catch (error) {
-            notification.error({ message: 'Error', description: 'Failed to load shipping orders' });
+            notification.error({ title: 'Error', description: 'Failed to load shipping orders' });
         } finally {
             setLoading(false);
         }
@@ -116,7 +116,7 @@ export default function ShippingPage() {
                 setSelectedRate(data.rates[0].postage_type);
             }
         } catch (error: any) {
-            notification.error({ message: 'Error', description: error.message || 'Failed to fetch shipping rates' });
+            notification.error({ title: 'Error', description: error.message || 'Failed to fetch shipping rates' });
         } finally {
             setLoadingRates(false);
         }
@@ -144,14 +144,14 @@ export default function ShippingPage() {
 
             const data = await res.json();
             notification.success({
-                message: 'Shipment Created!',
+                title: 'Shipment Created!',
                 description: `Tracking: ${data.trackingNumber}`
             });
 
             setLabelUrl(data.labelUrl);
             fetchOrders(); // Refresh list
         } catch (error: any) {
-            notification.error({ message: 'Error', description: error.message || 'Failed to create shipment' });
+            notification.error({ title: 'Error', description: error.message || 'Failed to create shipment' });
         } finally {
             setCreating(false);
         }
@@ -159,39 +159,47 @@ export default function ShippingPage() {
 
     const columns = [
         {
-            title: 'Order Code',
+            title: 'ORDER CODE',
             dataIndex: 'orderCode',
             key: 'orderCode',
+            render: (code: string) => <span className="font-bold text-zinc-800 dark:text-zinc-200">{code}</span>
         },
         {
-            title: 'Seller',
+            title: 'SELLER',
             dataIndex: ['seller', 'name'],
             key: 'seller',
-            render: (name: string | null) => name || 'N/A',
+            render: (name: string | null) => <span className="text-zinc-600 dark:text-zinc-400">{name || 'N/A'}</span>,
         },
         {
-            title: 'Recipient',
+            title: 'RECIPIENT',
             key: 'recipient',
-            render: (_: any, record: Order) => record.jobs[0]?.recipientName || 'N/A',
+            render: (_: any, record: Order) => <span className="text-zinc-700 dark:text-zinc-300 font-medium">{record.jobs[0]?.recipientName || 'N/A'}</span>,
         },
         {
-            title: 'Status',
+            title: 'STATUS',
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => (
-                <Tag color={status === 'SHIPPED' ? 'green' : status === 'COMPLETED' ? 'blue' : 'default'}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${status === 'SHIPPED'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                        : status === 'COMPLETED'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'
+                    }`}>
                     {status}
-                </Tag>
+                </span>
             ),
         },
         {
-            title: 'Tracking',
+            title: 'TRACKING',
             dataIndex: 'trackingNumber',
             key: 'trackingNumber',
-            render: (tracking: string | null) => tracking || '-',
+            render: (tracking: string | null) => tracking ? (
+                <span className="font-mono text-xs px-2 py-1 rounded bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{tracking}</span>
+            ) : '-',
         },
         {
-            title: 'Action',
+            title: 'ACTION',
             key: 'action',
             render: (_: any, record: Order) => (
                 <Space>
@@ -200,6 +208,11 @@ export default function ShippingPage() {
                         icon={<RocketOutlined />}
                         disabled={record.status === 'SHIPPED'}
                         onClick={() => openShippingModal(record)}
+                        className={`${record.status === 'SHIPPED'
+                                ? 'bg-zinc-200 text-zinc-400 border-transparent dark:bg-white/5 dark:text-zinc-600'
+                                : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 border-none shadow-md shadow-blue-500/20'
+                            }`}
+                        size="small"
                     >
                         {record.status === 'SHIPPED' ? 'Shipped' : 'Create Label'}
                     </Button>
@@ -214,25 +227,39 @@ export default function ShippingPage() {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold">Shipping Management</h1>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent m-0">Shipping Management</h1>
                     {isSandbox !== null && (
-                        <Tag color={isSandbox ? 'orange' : 'green'} className="font-bold uppercase">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${isSandbox
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                            }`}>
                             {isSandbox ? 'Sandbox / Test Mode' : 'Production Mode'}
-                        </Tag>
+                        </span>
                     )}
                 </div>
-                <Button icon={<ReloadOutlined />} onClick={fetchOrders} loading={loading}>Refresh</Button>
+                <Button
+                    icon={<ReloadOutlined />}
+                    onClick={fetchOrders}
+                    loading={loading}
+                    className="bg-white/50 dark:bg-white/10 border-zinc-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/20"
+                >
+                    Refresh
+                </Button>
             </div>
 
-            <Card title="Orders Ready to Ship (Stallion Express)">
+            <div className="glass-panel rounded-2xl overflow-hidden p-1 shadow-sm">
+                <div className="px-5 py-4 border-b border-black/5 dark:border-white/5">
+                    <h3 className="font-semibold text-zinc-700 dark:text-zinc-200">Orders Ready to Ship (Stallion Express)</h3>
+                </div>
                 <Table
                     dataSource={orders}
                     columns={columns}
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 20 }}
+                    className="glass-table"
                 />
-            </Card>
+            </div>
 
             <Modal
                 title={`Create Shipment - ${selectedOrder?.orderCode}`}
@@ -276,7 +303,11 @@ export default function ShippingPage() {
                         </div>
 
                         {/* Rates Selection */}
-                        {loadingRates && <Spin tip="Fetching rates..." />}
+                        {loadingRates && (
+                            <Spin tip="Fetching rates...">
+                                <div className="p-8 text-center text-gray-400">Loading...</div>
+                            </Spin>
+                        )}
 
                         {rates.length > 0 && (
                             <div>

@@ -19,6 +19,7 @@ export default async function AdminProductsPage() {
             id: p.id,
             sku: p.sku,
             name: p.name,
+            images: p.images,
             isActive: p.isActive,
             variantCount: p.variants.length,
             priceRange: basePrices.length > 0
@@ -36,10 +37,8 @@ export default async function AdminProductsPage() {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-6">Product Management</h2>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-                <ProductsClient products={mappedProducts} />
-            </div>
+            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Product Management</h2>
+            <ProductsClient products={mappedProducts} />
         </div>
     );
 }

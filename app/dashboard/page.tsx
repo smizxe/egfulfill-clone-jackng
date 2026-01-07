@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import React from 'react';
 import {
-    ShoppingOutlined,
     DollarOutlined,
     ClockCircleOutlined,
     CustomerServiceOutlined,
@@ -11,6 +10,7 @@ import {
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import DashboardClient from './DashboardClient';
+import { Package } from 'lucide-react';
 
 export default async function DashboardPage() {
     const cookieStore = await cookies();
@@ -78,9 +78,11 @@ export default async function DashboardPage() {
     const orderCount = orders.length;
     const pendingCount = orders.filter((o) => o.status === 'RECEIVED' || o.status === 'IN_PROCESS').length;
 
+
+
     // Stats data
     const stats = [
-        { title: 'Orders', value: orderCount, icon: <ShoppingOutlined />, color: '#1890ff' },
+        { title: 'Orders', value: orderCount, icon: <Package size={24} />, color: '#1890ff' },
         { title: 'Refunds', value: 0, prefix: '$', styles: { content: { color: '#cf1322' } }, icon: <DollarOutlined />, color: '#ff4d4f' },
         { title: 'Orders Pending', value: pendingCount, icon: <ClockCircleOutlined />, color: '#faad14' },
         { title: 'Unsolved Tickets', value: 0, icon: <CustomerServiceOutlined />, color: '#fa8c16' },

@@ -3,119 +3,111 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// 3.1 Users / Auth
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         String   @default("SELLER") // ADMIN, ACCOUNTANT, SELLER, PRODUCTION
-  sellerId     String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  seller       Seller?  @relation(fields: [sellerId], references: [id])
-  auditLogs    AuditLog[]
-  confirmedTopups TopupRequest[] @relation("ConfirmedBy")
-  inventoryLogs   InventoryMovement[]
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  passwordHash       String
+  role               String              @default("SELLER")
+  sellerId           String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  auditLogs          AuditLog[]
+  inventoryLogs      InventoryMovement[]
+  confirmedTopups    TopupRequest[]      @relation("ConfirmedBy")
+  seller             Seller?             @relation(fields: [sellerId], references: [id])
   verificationTokens VerificationToken[]
 }
 
 model VerificationToken {
-  id        String   @id @default(uuid())
-  identifier String   // Email
-  token      String   
+  id         String   @id @default(uuid())
+  identifier String
+  token      String
   expires    DateTime
   createdAt  DateTime @default(now())
-  
-  userId     String? // Optional linking to user if created before/after
-  user       User?   @relation(fields: [userId], references: [id])
-  
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+
   @@unique([identifier, token])
 }
 
 model Seller {
-  id           String   @id @default(uuid())
-  code         String   @unique // e.g. SEL001
-  name         String
-  contactEmail String?
-  phone        String?
-  address      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  id            String         @id @default(uuid())
+  code          String         @unique
+  name          String
+  contactEmail  String?
+  phone         String?
+  address       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  jobs          Job[]
+  orders        Order[]
+  topupRequests TopupRequest[]
   users         User[]
   wallet        Wallet?
   walletLedger  WalletLedger[]
-  topupRequests TopupRequest[]
-  orders        Order[]
-  jobs          Job[]
 }
 
-// 3.2 Wallet & Ledger
 model Wallet {
   id        String   @id @default(uuid())
   sellerId  String   @unique
   balance   Float    @default(0.0)
   currency  String   @default("USD")
   updatedAt DateTime @updatedAt
-  
   seller    Seller   @relation(fields: [sellerId], references: [id])
 }
 
 model WalletLedger {
   id        String   @id @default(uuid())
   sellerId  String
-  type      String   // CREDIT, DEBIT, ADJUST
+  type      String
   amount    Float
   currency  String   @default("USD")
-  refType   String   // TOPUP, ORDER, MANUAL
+  refType   String
   refId     String?
   note      String?
-  createdBy String?  // User ID or SYSTEM
+  createdBy String?
   createdAt DateTime @default(now())
-
   seller    Seller   @relation(fields: [sellerId], references: [id])
-  // Index: seller_id, created_at, ref_type+ref_id (Prisma handles indexes via @@index)
+
   @@index([sellerId])
   @@index([refType, refId])
   @@index([createdAt])
 }
 
-// 3.3 Topup Requests
 model TopupRequest {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   sellerId        String
   amount          Float
-  currency        String   @default("VND") // User mentioned Seller (VN), assuming VND transfer but Wallet might be USD. I will keep it flexible or standard.
+  currency        String    @default("VND")
   bankName        String?
   bankAccount     String?
   transferContent String?
-  status          String   // PENDING, CONFIRMED, REJECTED
+  status          String
   evidenceUrl     String?
   confirmedById   String?
   confirmedAt     DateTime?
-  createdAt       DateTime @default(now())
-
-  seller      Seller @relation(fields: [sellerId], references: [id])
-  confirmedBy User?  @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+  createdAt       DateTime  @default(now())
+  confirmedBy     User?     @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+  seller          Seller    @relation(fields: [sellerId], references: [id])
 }
 
-// 3.4 Products & Pricing
 model Product {
-  id        String   @id @default(uuid())
-  sku       String   @unique
-  name      String
-  isActive  Boolean  @default(true)
-  shippingRates String? // JSON: [{minQty: number, rate: number, label: string}]
-  extraFees     String? // JSON: [{label: string, surcharge: number, type: string}]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  variants  ProductVariant[]
+  id            String           @id @default(uuid())
+  sku           String           @unique
+  name          String
+  isActive      Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  extraFees     String?
+  shippingRates String?
+  images        String           @default("[]")
+  variants      ProductVariant[]
 }
 
 model ProductVariant {
@@ -128,15 +120,14 @@ model ProductVariant {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
   product      Product  @relation(fields: [productId], references: [id])
-  @@unique([productId, color, size]) // Unique variant constraint
+
+  @@unique([productId, color, size])
 }
 
-// 3.5 Inventory
 model InventoryItem {
   id        String   @id @default(uuid())
-  sku       String   // Can be Product SKU or Variant logic. Let's assume matches ProductVariant or Product.
+  sku       String
   color     String?
   size      String?
   onHand    Int      @default(0)
@@ -144,59 +135,52 @@ model InventoryItem {
   minStock  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@unique([sku, color, size])
 }
 
 model InventoryMovement {
-  id        String   @id @default(uuid())
-  sku       String
-  color     String?
-  size      String?
-  qtyChange Int
-  type      String   // RESERVE, UNRESERVE, DEDUCT, ADD, ADJUST
-  refType   String?
-  refId     String?
+  id          String   @id @default(uuid())
+  sku         String
+  color       String?
+  size        String?
+  qtyChange   Int
+  type        String
+  refType     String?
+  refId       String?
   createdById String?
-  createdAt DateTime @default(now())
-  
-  createdBy User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  createdBy   User?    @relation(fields: [createdById], references: [id])
 }
 
-// 3.6 Orders / Jobs
 model Order {
-  id              String   @id @default(uuid())
+  id              String     @id @default(uuid())
   sellerId        String
-  orderCode       String   @unique // ORD-202501-000123
-  status          String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, RECEIVED, IN_PROCESS, COMPLETED, SHIPPED, REJECTED
+  orderCode       String     @unique
+  status          String     @default("PENDING_APPROVAL")
   totalAmount     Float
-  currency        String   @default("USD")
-  
+  currency        String     @default("USD")
   shippingCountry String?
   shippingMethod  String?
   trackingNumber  String?
   carrier         String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  seller    Seller   @relation(fields: [sellerId], references: [id])
-  jobs      Job[]
-  shipments Shipment[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  jobs            Job[]
+  seller          Seller     @relation(fields: [sellerId], references: [id])
+  shipments       Shipment[]
 }
 
 model Job {
-  id                  String   @id @default(uuid())
+  id                  String    @id @default(uuid())
   orderId             String
   sellerId            String
-  jobCode             String   @unique // JOB000001
-  status              String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, RECEIVED, IN_PROCESS, COMPLETED, REJECTED
-  
+  jobCode             String    @unique
+  status              String    @default("PENDING_APPROVAL")
   sku                 String
   color               String?
   size                String?
-  qty                 Int      @default(1)
-  
+  qty                 Int       @default(1)
   recipientName       String?
   phone               String?
   address1            String?
@@ -205,64 +189,54 @@ model Job {
   state               String?
   zip                 String?
   country             String?
-  
-  designs             String   @default("[]") // JSON: [{url: string, location: string}]
+  designs             String    @default("[]")
   fileLocalPath       String?
-  fileStatus          String   @default("PENDING") // PENDING, DOWNLOADED, FAILED
-  embroideryDriveLink String?  // Link to embroidery file on gdrive
-  
+  fileStatus          String    @default("PENDING")
+  embroideryDriveLink String?
   priceToCharge       Float
   cogsActual          Float?
   notes               String?
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  order   Order   @relation(fields: [orderId], references: [id])
-  seller  Seller  @relation(fields: [sellerId], references: [id])
-  tokens  QrToken[]
-  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  seller              Seller    @relation(fields: [sellerId], references: [id])
+  order               Order     @relation(fields: [orderId], references: [id])
+  tokens              QrToken[]
+
   @@index([sellerId])
   @@index([status])
 }
 
-// 3.7 QR Tokens
 model QrToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   jobId     String
-  type      String   // FILE, STATUS
-  token     String   @unique
+  type      String
+  token     String    @unique
   maxUses   Int?
-  usedCount Int      @default(0)
+  usedCount Int       @default(0)
   expiresAt DateTime?
-  createdAt DateTime @default(now())
-  
-  job       Job      @relation(fields: [jobId], references: [id])
+  createdAt DateTime  @default(now())
+  job       Job       @relation(fields: [jobId], references: [id])
 }
 
-// 3.8 Shipments
 model Shipment {
   id             String   @id @default(uuid())
   orderId        String
   carrier        String?
   trackingNumber String?
   labelPdfUrl    String?
-  status         String   // CREATED, LABEL_PRINTED, SHIPPED
+  status         String
   createdAt      DateTime @default(now())
-  
   order          Order    @relation(fields: [orderId], references: [id])
 }
 
-// 3.9 Audit Logs
 model AuditLog {
   id          String   @id @default(uuid())
   actorUserId String?
-  actorType   String   // USER, QR
+  actorType   String
   action      String
   entityType  String
   entityId    String?
-  metaJson    String?  // Store JSON data
+  metaJson    String?
   createdAt   DateTime @default(now())
-  
   actorUser   User?    @relation(fields: [actorUserId], references: [id])
 }

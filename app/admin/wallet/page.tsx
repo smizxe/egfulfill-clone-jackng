@@ -87,46 +87,62 @@ export default function AdminWalletPage() {
 
     const columnsHistory = [
         {
-            title: 'Date',
+            title: 'DATE',
             dataIndex: 'createdAt',
             key: 'createdAt',
-            render: (text: string) => new Date(text).toLocaleString(),
+            render: (text: string) => <span className="text-zinc-500 dark:text-zinc-500">{new Date(text).toLocaleString()}</span>,
         },
         {
-            title: 'User',
+            title: 'USER',
             dataIndex: ['user', 'email'],
             key: 'user',
+            render: (email: string) => <span className="font-medium text-zinc-700 dark:text-zinc-300">{email}</span>
         },
         {
-            title: 'Type',
+            title: 'TYPE',
             dataIndex: 'type',
             key: 'type',
-            render: (type: string) => <Tag color={type.includes('TOP_UP') ? 'green' : 'blue'}>{type}</Tag>,
+            render: (type: string) => (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${type.includes('TOP_UP')
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                    }`}>
+                    {type.replace(/_/g, ' ')}
+                </span>
+            ),
         },
         {
-            title: 'Amount',
+            title: 'AMOUNT',
             dataIndex: 'amount',
             key: 'amount',
-            render: (amount: number) => `$${amount.toFixed(2)}`,
+            render: (amount: number) => <span className="font-bold text-zinc-800 dark:text-zinc-100">${amount.toFixed(2)}</span>,
         },
         {
-            title: 'Status',
+            title: 'STATUS',
             dataIndex: 'status',
             key: 'status',
-            render: (status: string) => <Tag color="green">{status}</Tag>,
+            render: (status: string) => (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                    {status}
+                </span>
+            ),
         },
     ];
 
     const columnsPending = [
         ...columnsHistory.filter(c => c.key !== 'status'), // Reuse columns
         {
-            title: 'Status',
+            title: 'STATUS',
             dataIndex: 'status',
             key: 'status',
-            render: (status: string) => <Tag color="gold">{status}</Tag>,
+            render: (status: string) => (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+                    {status}
+                </span>
+            ),
         },
         {
-            title: 'Action',
+            title: 'ACTION',
             key: 'action',
             render: (_: any, record: Transaction) => (
                 <Popconfirm
@@ -135,7 +151,7 @@ export default function AdminWalletPage() {
                     okText="Approve"
                     cancelText="Cancel"
                 >
-                    <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
+                    <Button type="primary" size="small" icon={<CheckCircleOutlined />} className="bg-emerald-600 hover:bg-emerald-500 border-none shadow-md shadow-emerald-500/20">
                         Approve
                     </Button>
                 </Popconfirm>
@@ -149,57 +165,74 @@ export default function AdminWalletPage() {
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Wallet Management</h1>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">Wallet Management</h1>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsModalVisible(true)}
+                    className="bg-emerald-600 hover:bg-emerald-500 border-none shadow-lg shadow-emerald-500/20 h-10 px-5 rounded-xl font-semibold"
+                >
                     Manual Add Funds
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                    <div className="text-gray-500">Total System Balance</div>
-                    <div className="text-2xl font-bold">
-                        ${data.users.reduce((acc, user) => acc + user.balance, 0).toFixed(2)}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="glass-card p-6 flex flex-col justify-between relative overflow-hidden group">
+                    <div className="z-10 relative">
+                        <div className="text-zinc-500 dark:text-zinc-400 mb-1 font-medium">Total System Balance</div>
+                        <div className="text-3xl font-bold text-zinc-800 dark:text-zinc-100">
+                            ${data.users.reduce((acc, user) => acc + user.balance, 0).toFixed(2)}
+                        </div>
                     </div>
-                </Card>
-                <Card>
-                    <div className="text-gray-500">Pending Requests</div>
-                    <div className="text-2xl font-bold text-orange-500">
-                        {pendingRequests.length}
+                </div>
+                <div className="glass-card p-6 flex flex-col justify-between relative overflow-hidden group">
+                    <div className="z-10 relative">
+                        <div className="text-zinc-500 dark:text-zinc-400 mb-1 font-medium">Pending Requests</div>
+                        <div className="text-3xl font-bold text-orange-500">
+                            {pendingRequests.length}
+                        </div>
                     </div>
-                </Card>
+                </div>
             </div>
 
-            <Card extra={<Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading} />}>
-                <Tabs items={[
-                    {
-                        key: '1',
-                        label: `Pending Requests (${pendingRequests.length})`,
-                        children: (
-                            <Table
-                                dataSource={pendingRequests}
-                                columns={columnsPending}
-                                rowKey="id"
-                                loading={loading}
-                                pagination={{ pageSize: 10 }}
-                            />
-                        )
-                    },
-                    {
-                        key: '2',
-                        label: 'Transaction History',
-                        children: (
-                            <Table
-                                dataSource={history}
-                                columns={columnsHistory}
-                                rowKey="id"
-                                loading={loading}
-                                pagination={{ pageSize: 20 }}
-                            />
-                        )
-                    }
-                ]} />
-            </Card>
+            <div className="glass-panel p-2 rounded-2xl">
+                <div className="flex justify-end px-4 py-2">
+                    <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading} type="text">Refresh</Button>
+                </div>
+                <Tabs
+                    items={[
+                        {
+                            key: '1',
+                            label: <span className="mx-2">Pending Requests ({pendingRequests.length})</span>,
+                            children: (
+                                <Table
+                                    dataSource={pendingRequests}
+                                    columns={columnsPending}
+                                    rowKey="id"
+                                    loading={loading}
+                                    pagination={{ pageSize: 10 }}
+                                    className="glass-table"
+                                />
+                            )
+                        },
+                        {
+                            key: '2',
+                            label: <span className="mx-2">Transaction History</span>,
+                            children: (
+                                <Table
+                                    dataSource={history}
+                                    columns={columnsHistory}
+                                    rowKey="id"
+                                    loading={loading}
+                                    pagination={{ pageSize: 20 }}
+                                    className="glass-table"
+                                />
+                            )
+                        }
+                    ]}
+                    className="px-2"
+                />
+            </div>
 
             <Modal
                 title="Manual Add Funds (Admin)"

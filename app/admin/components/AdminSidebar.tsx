@@ -10,7 +10,8 @@ import {
     OrderedListOutlined,
     RocketOutlined,
     LogoutOutlined,
-    CheckSquareOutlined
+    CheckSquareOutlined,
+    BankOutlined
 } from '@ant-design/icons';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -48,7 +49,7 @@ export default function AdminSidebar() {
         },
         {
             key: '/admin/inventory',
-            icon: <ShoppingOutlined />, // Reusing Shopping for Inventory
+            icon: <BankOutlined />, // Warehouse style
             label: 'Inventory',
         },
         {
@@ -67,7 +68,7 @@ export default function AdminSidebar() {
         <Sider theme="light" width={250} style={{ minHeight: '100vh', borderRight: '1px solid #f0f0f0' }}>
             <div style={{ padding: '20px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
                 <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-                    EG Fulfillment
+                    EmFulFill
                 </h1>
                 <span style={{ fontSize: '12px', color: '#999' }}>Admin Panel</span>
             </div>

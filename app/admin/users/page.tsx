@@ -67,30 +67,38 @@ export default function AdminUsersPage() {
 
     const columns = [
         {
-            title: 'Email',
+            title: 'EMAIL',
             dataIndex: 'email',
             key: 'email',
+            render: (email: string) => <span className="font-medium text-zinc-700 dark:text-zinc-300">{email}</span>
         },
         {
-            title: 'Name',
+            title: 'NAME',
             dataIndex: 'name',
             key: 'name',
-            render: (name: string | null) => name || '-',
+            render: (name: string | null) => <span className="text-zinc-600 dark:text-zinc-400">{name || '-'}</span>,
         },
         {
-            title: 'Balance',
+            title: 'BALANCE',
             dataIndex: 'balance',
             key: 'balance',
-            render: (balance: number) => `$${balance.toFixed(2)}`,
+            render: (balance: number) => <span className="font-bold text-emerald-600 dark:text-emerald-400">${balance.toFixed(2)}</span>,
         },
         {
-            title: 'Role',
+            title: 'ROLE',
             dataIndex: 'role',
             key: 'role',
-            render: (role: string) => <Tag color={role === 'ADMIN' ? 'red' : 'blue'}>{role}</Tag>,
+            render: (role: string) => (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${role === 'ADMIN'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                    }`}>
+                    {role}
+                </span>
+            ),
         },
         {
-            title: 'Actions',
+            title: 'ACTIONS',
             key: 'actions',
             render: (_: any, record: User) => (
                 <Space>
@@ -98,6 +106,7 @@ export default function AdminUsersPage() {
                         size="small"
                         icon={<StopOutlined />}
                         onClick={() => handleSuspend(record.id)}
+                        className="text-amber-600 border-amber-200 hover:text-amber-700 hover:border-amber-300 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-900/20 bg-transparent"
                     >
                         Suspend
                     </Button>
@@ -105,6 +114,7 @@ export default function AdminUsersPage() {
                         size="small"
                         danger
                         onClick={() => handleBan(record.id)}
+                        className="bg-transparent"
                     >
                         Ban
                     </Button>
@@ -115,26 +125,30 @@ export default function AdminUsersPage() {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-6">User Management</h2>
+            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-rose-500 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent">User Management</h2>
 
-            <div className="mb-4">
-                <Input
-                    placeholder="Search by email or name..."
-                    prefix={<SearchOutlined />}
-                    value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
-                    style={{ width: 300 }}
-                    allowClear
-                />
+            <div className="mb-6 flex justify-between items-center">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/50 dark:bg-black/20 border border-zinc-200 dark:border-zinc-700 w-[300px] focus-within:ring-2 focus-within:ring-pink-500/20 transition-all">
+                    <SearchOutlined className="text-zinc-400" />
+                    <input
+                        className="bg-transparent border-none outline-none text-sm text-zinc-700 dark:text-zinc-200 w-full placeholder:text-zinc-400"
+                        placeholder="Search by email or name..."
+                        value={searchText}
+                        onChange={e => setSearchText(e.target.value)}
+                    />
+                </div>
             </div>
 
-            <Table
-                dataSource={filteredUsers}
-                columns={columns}
-                rowKey="id"
-                loading={loading}
-                pagination={{ pageSize: 20 }}
-            />
+            <div className="glass-panel rounded-2xl overflow-hidden p-1">
+                <Table
+                    dataSource={filteredUsers}
+                    columns={columns}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{ pageSize: 20 }}
+                    className="glass-table"
+                />
+            </div>
         </div>
     );
 }

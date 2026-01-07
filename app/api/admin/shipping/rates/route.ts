@@ -6,6 +6,11 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { toAddress, weight, length, width, height } = body;
 
+        // Debug: log the request
+        console.log('Get Rates Request:', JSON.stringify(body, null, 2));
+        console.log('Stallion API URL:', process.env.STALLION_API_URL);
+        console.log('Stallion Token configured:', !!process.env.STALLION_API_TOKEN);
+
         if (!toAddress || !weight) {
             return NextResponse.json({ error: 'Missing required fields: toAddress, weight' }, { status: 400 });
         }
@@ -30,8 +35,11 @@ export async function POST(req: NextRequest) {
             },
         };
 
+        console.log('Stallion Rate Request:', JSON.stringify(rateRequest, null, 2));
+
         const rates = await getShippingRates(rateRequest);
 
+        console.log('Rates received:', rates.length);
         return NextResponse.json({ rates });
     } catch (error: any) {
         console.error('Get rates error:', error);

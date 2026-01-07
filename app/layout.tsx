@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AntdRegistry from "@/lib/AntdRegistry";
+import { ThemeProvider } from "@/components/Providers/ThemeContext";
+import { UserProvider } from "@/components/Providers/UserContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,7 +27,11 @@ export default function RootLayout({
         className={`${inter.variable} antialiased font-sans`}
         suppressHydrationWarning
       >
-        <AntdRegistry>{children}</AntdRegistry>
+        <ThemeProvider>
+          <UserProvider>
+            <AntdRegistry>{children}</AntdRegistry>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

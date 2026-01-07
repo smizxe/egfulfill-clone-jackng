@@ -1,34 +1,38 @@
 'use client';
 
-import React from 'react';
-import { Layout, Button, Avatar, Dropdown } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
-import AdminSidebar from './components/AdminSidebar';
-
-const { Header, Content } = Layout;
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { theme } from 'antd';
+import AdminSidebar from '@/components/Admin/AdminSidebar';
+import AdminTopBar from '@/components/Admin/AdminTopBar';
+import { useState } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    const [collapsed, setCollapsed] = useState(false);
+
     return (
-        <Layout style={{ minHeight: '100vh' }}>
-            <AdminSidebar />
-            <Layout>
-                <Header style={{
-                    background: '#fff',
-                    padding: '0 24px',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    borderBottom: '1px solid #f0f0f0'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontWeight: 500 }}>Administrator</span>
-                        <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
-                    </div>
-                </Header>
-                <Content style={{ margin: '24px 16px', padding: 24, minHeight: 280, background: '#f5f5f5' }}>
+        <div className="min-h-screen transition-colors duration-500 ease-in-out">
+            {/* Background Decorations - Slightly different colors for Admin to distinguish */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-pink-500/5 blur-3xl" />
+                <div className="absolute top-[20%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-500/5 blur-3xl" />
+                <div className="absolute bottom-0 left-[20%] w-[30%] h-[30%] rounded-full bg-orange-500/5 blur-3xl" />
+            </div>
+
+            <AdminSidebar collapsed={collapsed} onCollapse={setCollapsed} />
+
+            <AdminTopBar collapsed={collapsed} />
+
+            <main
+                className={`
+                    relative z-10 pt-20 pb-8 px-6 transition-all duration-300
+                    ${collapsed ? 'ml-20' : 'ml-64'}
+                `}
+            >
+                <div className="animate-fade-in">
                     {children}
-                </Content>
-            </Layout>
-        </Layout>
+                </div>
+            </main>
+        </div>
     );
 }

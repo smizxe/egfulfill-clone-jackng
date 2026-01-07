@@ -15,6 +15,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                     name,
                     sku,
                     isActive,
+                    images: JSON.stringify(body.images || []),
                     shippingRates: body.shippingRates,
                     extraFees: body.extraFees
                 },

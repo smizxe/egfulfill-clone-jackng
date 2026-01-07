@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Tag, notification, Space, Tooltip, Badge } from 'antd';
+import { Table, Button, notification, Space } from 'antd';
 import { ReloadOutlined, PrinterOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 interface Job {
@@ -82,11 +82,22 @@ export default function ProductionPage() {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: (status: string) => (
-                <Tag color={status === 'RECEIVED' ? 'blue' : status === 'IN_PROCESS' ? 'orange' : 'green'}>
-                    {status.replace('_', ' ')}
-                </Tag>
-            ),
+            render: (status: string) => {
+                let badgeClass = 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+                if (status === 'RECEIVED') {
+                    badgeClass = 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400';
+                } else if (status === 'IN_PROCESS') {
+                    badgeClass = 'bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400';
+                } else {
+                    badgeClass = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400';
+                }
+
+                return (
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${badgeClass}`}>
+                        {status.replace('_', ' ')}
+                    </span>
+                );
+            },
         },
         {
             title: 'Created At',
@@ -103,25 +114,37 @@ export default function ProductionPage() {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-8">
                 <Space>
-                    <h1 className="text-2xl font-bold">Production Release</h1>
-                    <Badge count={jobs.length} style={{ backgroundColor: '#108ee9' }} />
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 dark:from-pink-300 dark:to-purple-400 bg-clip-text text-transparent">
+                        Production Release
+                    </h1>
+                    <span className="px-3 py-1 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-full text-sm font-semibold border border-pink-500/20">
+                        {jobs.length} Jobs
+                    </span>
                 </Space>
                 <Space>
-                    <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Refresh</Button>
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={fetchData}
+                        loading={loading}
+                        className="border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-pink-500 dark:hover:text-pink-400 bg-transparent"
+                    >
+                        Refresh
+                    </Button>
                     <Button
                         type="primary"
                         icon={<PrinterOutlined />}
                         onClick={handleBulkPrint}
                         disabled={selectedRowKeys.length === 0}
+                        className="bg-purple-600 hover:bg-purple-500 border-none shadow-md shadow-purple-500/20"
                     >
                         Generate Labels ({selectedRowKeys.length})
                     </Button>
                 </Space>
             </div>
 
-            <Card className="shadow-sm">
+            <div className="glass-panel rounded-2xl p-1 overflow-hidden">
                 <Table
                     rowSelection={rowSelection}
                     dataSource={jobs}
@@ -129,8 +152,9 @@ export default function ProductionPage() {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 50 }}
+                    className="glass-table"
                 />
-            </Card>
+            </div>
         </div>
     );
 }

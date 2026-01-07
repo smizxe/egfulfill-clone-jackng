@@ -1,36 +1,74 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import {
-    Menu, Sun, Moon, ArrowRight, PlayCircle, LogIn, ShieldCheck,
+    Menu, Sun, Moon, ArrowRight, PlayCircle, ShieldCheck,
     DollarSign, Box, XCircle, AlertTriangle, CheckCircle2,
     TrendingDown, FileSpreadsheet, Wallet, ScanLine, Layers,
     Globe2, BarChart3, QrCode, Plug, Code, Truck, Star,
-    Twitter, Linkedin, Instagram, Check
+    Twitter, Linkedin, Instagram, Music2, Check, UserPlus, LogIn, Home
 } from 'lucide-react';
-import Link from 'next/link';
 
-export default function HomePage() {
+interface HomePageProps {
+    isLoggedIn?: boolean;
+}
+
+export default function HomePage({ isLoggedIn }: HomePageProps) {
     const [theme, setTheme] = useState('light');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
-        // Theme initialization
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            setTheme('dark');
-            document.documentElement.classList.add('dark');
-        } else {
+        // Initial Theme Logic - default to 'light' per HTML behavior unless specified
+        if (typeof window !== 'undefined') {
+            // Clear both body and documentElement to prevent system preference leaks or stale classes
+            document.body.classList.remove('dark', 'gradient-theme');
+            document.documentElement.classList.remove('dark', 'gradient-theme');
             setTheme('light');
-            document.documentElement.classList.remove('dark');
         }
+    }, []);
 
-        // Scroll listener
+    const toggleTheme = (newTheme: string) => {
+        setTheme(newTheme);
+        // Clear both
+        document.body.classList.remove('dark', 'gradient-theme');
+        document.documentElement.classList.remove('dark', 'gradient-theme');
+
+        if (newTheme === 'dark') {
+            document.body.classList.add('dark');
+            document.documentElement.classList.add('dark');
+        } else if (newTheme === 'gradient') {
+            document.body.classList.add('gradient-theme');
+            document.documentElement.classList.add('gradient-theme');
+        }
+        // light is default (no class)
+    };
+
+    // Navbar Scroll Effect
+    useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 10);
+            const nav = document.getElementById('navbar');
+            if (nav) {
+                if (window.scrollY > 10) {
+                    nav.classList.add('shadow-sm');
+                    nav.classList.add('bg-[var(--card-bg)]/80');
+                } else {
+                    nav.classList.remove('shadow-sm');
+                    nav.classList.remove('bg-[var(--card-bg)]/80');
+                }
+            }
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Intersection Observer
+    useEffect(() => {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
         };
 
-        // Intersection Observer for animations
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -38,46 +76,60 @@ export default function HomePage() {
                     observer.unobserve(entry.target);
                 }
             });
-        }, {
-            threshold: 0.1,
-            rootMargin: "0px 0px -50px 0px"
-        });
+        }, observerOptions);
 
         document.querySelectorAll('.reveal').forEach(el => {
             observer.observe(el);
         });
 
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => observer.disconnect();
     }, []);
 
-    const toggleTheme = (newTheme: string) => {
-        setTheme(newTheme);
-        if (newTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-            localStorage.theme = 'dark';
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.theme = 'light';
-        }
+    // Typewriter Effect
+    const [text, setText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [loopNum, setLoopNum] = useState(0);
+    const [typingSpeed, setTypingSpeed] = useState(150);
+
+    const words = ["POD", "Dropshipping", "POD & Dropshipping"];
+
+    useEffect(() => {
+        const handleType = () => {
+            const i = loopNum % words.length;
+            const fullText = words[i];
+
+            setText(isDeleting
+                ? fullText.substring(0, text.length - 1)
+                : fullText.substring(0, text.length + 1)
+            );
+
+            setTypingSpeed(isDeleting ? 30 : 150);
+
+            if (!isDeleting && text === fullText) {
+                setTimeout(() => setIsDeleting(true), 1500); // Pause at end
+            } else if (isDeleting && text === '') {
+                setIsDeleting(false);
+                setLoopNum(loopNum + 1);
+            }
+        };
+
+        const timer = setTimeout(handleType, typingSpeed);
+        return () => clearTimeout(timer);
+    }, [text, isDeleting, loopNum, typingSpeed]);
+
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
     return (
-        <div className={`antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden relative bg-[var(--bg-body)] text-[var(--text-main)] transition-colors duration-500`}>
+        <div className="antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden relative">
+
             {/* Theme Toggles (Fixed Bottom Right) */}
             <div className="fixed bottom-6 right-6 z-50 flex gap-2 p-2 rounded-full glass-panel shadow-lg">
-                <button
-                    onClick={() => toggleTheme('light')}
-                    className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                    title="Light Mode"
-                >
+                <button onClick={() => toggleTheme('light')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" title="Light Mode">
                     <Sun className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
-                <button
-                    onClick={() => toggleTheme('dark')}
-                    className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                    title="Dark Mode"
-                >
+                <button onClick={() => toggleTheme('dark')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" title="Dark Mode">
                     <Moon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
             </div>
@@ -91,10 +143,7 @@ export default function HomePage() {
             </div>
 
             {/* Navbar */}
-            <nav
-                className={`fixed top-0 w-full z-40 border-b border-transparent transition-all duration-300 ${scrolled ? 'glass-panel shadow-sm bg-[var(--card-bg)]/80 border-white/10' : ''}`}
-                id="navbar"
-            >
+            <nav className="fixed top-0 w-full z-40 border-b border-white/10 glass-panel transition-all duration-300" id="navbar">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2 cursor-pointer group">
@@ -114,30 +163,50 @@ export default function HomePage() {
 
                     {/* CTAs */}
                     <div className="hidden md:flex items-center gap-4">
-                        <Link href="/login" className="text-sm font-medium text-[var(--text-main)] hover:text-brand-600 transition-colors">Login</Link>
-                        <Link href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20">
-                            Register
-                        </Link>
+                        {isLoggedIn ? (
+                            <a href="/dashboard" className="bg-[var(--text-main)] text-[var(--bg-body)] px-6 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                                <Home className="w-4 h-4" />
+                                Go to Dashboard
+                            </a>
+                        ) : (
+                            <>
+                                <a href="/login" className="text-sm font-medium text-[var(--text-main)] hover:text-brand-600 transition-colors">Login</a>
+                                <a href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                                    <UserPlus className="w-4 h-4" />
+                                    Register
+                                </a>
+                            </>
+                        )}
                     </div>
 
                     {/* Mobile Menu Button */}
-                    <button className="md:hidden text-[var(--text-main)]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                    <button className="md:hidden text-[var(--text-main)]" onClick={toggleMobileMenu}>
                         <Menu className="w-6 h-6" />
                     </button>
                 </div>
 
                 {/* Mobile Menu Dropdown */}
-                {isMobileMenuOpen && (
-                    <div id="mobile-menu" className="md:hidden absolute top-16 left-0 w-full glass-panel border-b border-gray-200 dark:border-gray-800 p-6 flex flex-col gap-4 shadow-xl">
-                        <a href="#solutions" className="block text-sm font-medium text-[var(--text-main)] py-2">Solutions</a>
-                        <a href="#workflow" className="block text-sm font-medium text-[var(--text-main)] py-2">Workflow</a>
-                        <a href="#features" className="block text-sm font-medium text-[var(--text-main)] py-2">Features</a>
-                        <a href="#pricing" className="block text-sm font-medium text-[var(--text-main)] py-2">Pricing</a>
-                        <div className="h-px bg-gray-200 dark:bg-gray-800 my-2"></div>
-                        <Link href="/login" className="block w-full text-center text-sm font-medium text-[var(--text-main)] py-2">Login</Link>
-                        <Link href="/register" className="block w-full bg-brand-600 text-white px-4 py-3 rounded-lg text-sm font-medium text-center">Register</Link>
-                    </div>
-                )}
+                <div id="mobile-menu" className={`${isMobileMenuOpen ? 'flex' : 'hidden'} md:hidden absolute top-16 left-0 w-full glass-panel border-b border-gray-200 dark:border-gray-800 p-6 flex-col gap-4 shadow-xl`}>
+                    <a href="#solutions" className="block text-sm font-medium text-[var(--text-main)] py-2">Solutions</a>
+                    <a href="#workflow" className="block text-sm font-medium text-[var(--text-main)] py-2">Workflow</a>
+                    <a href="#features" className="block text-sm font-medium text-[var(--text-main)] py-2">Features</a>
+                    <a href="#pricing" className="block text-sm font-medium text-[var(--text-main)] py-2">Pricing</a>
+                    <div className="h-px bg-gray-200 dark:bg-gray-800 my-2"></div>
+                    {isLoggedIn ? (
+                        <a href="/dashboard" className="w-full bg-brand-600 text-white px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                            <Home className="w-4 h-4" />
+                            Go to Dashboard
+                        </a>
+                    ) : (
+                        <>
+                            <a href="/login" className="block text-sm font-medium text-[var(--text-main)] py-2">Login</a>
+                            <a href="/register" className="w-full bg-brand-600 text-white px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                                <UserPlus className="w-4 h-4" />
+                                Register
+                            </a>
+                        </>
+                    )}
+                </div>
             </nav>
 
             {/* Main Content */}
@@ -157,7 +226,11 @@ export default function HomePage() {
                             </div>
 
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 text-[var(--text-main)]">
-                                Professional Fulfillment for <span className="text-gradient">POD &amp; Dropshipping</span>
+                                Professional Fulfillment for <br />
+                                <span className="text-gradient h-20 inline-block min-h-[1.2em]">
+                                    {text}
+                                    <span className="animate-blink border-r-2 border-brand-500 ml-1"></span>
+                                </span>
                             </h1>
 
                             <p className="text-lg md:text-xl text-[var(--text-muted)] mb-8 leading-relaxed max-w-lg">
@@ -165,14 +238,23 @@ export default function HomePage() {
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                                <Link href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
-                                    Register
-                                    <ArrowRight className="w-4 h-4" />
-                                </Link>
-                                <Link href="/login" className="px-8 py-3.5 rounded-full text-sm font-medium text-[var(--text-main)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
-                                    <LogIn className="w-4 h-4" />
-                                    Login
-                                </Link>
+                                {isLoggedIn ? (
+                                    <a href="/dashboard" className="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
+                                        <Home className="w-4 h-4" />
+                                        Go to Dashboard
+                                    </a>
+                                ) : (
+                                    <>
+                                        <a href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
+                                            Register
+                                            <UserPlus className="w-4 h-4" />
+                                        </a>
+                                        <a href="/login" className="px-8 py-3.5 rounded-full text-sm font-medium text-[var(--text-main)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                                            <LogIn className="w-4 h-4" />
+                                            Login
+                                        </a>
+                                    </>
+                                )}
                             </div>
 
                             <div className="mt-8 flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -239,7 +321,7 @@ export default function HomePage() {
                             </div>
 
                             {/* Floating Feature Cards */}
-                            <div className="absolute -top-6 -right-6 bg-[var(--card-bg)] p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style={{ animationDuration: '3s' }}>
+                            <div className="absolute -top-6 -right-6 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style={{ animationDuration: '3s' }}>
                                 <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600">
                                     <DollarSign className="w-5 h-5" />
                                 </div>
@@ -249,7 +331,7 @@ export default function HomePage() {
                                 </div>
                             </div>
 
-                            <div className="absolute -bottom-4 -left-4 bg-[var(--card-bg)] p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style={{ animationDuration: '4s' }}>
+                            <div className="absolute -bottom-4 -left-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-xl border border-[var(--card-border)] flex items-center gap-3 animate-bounce" style={{ animationDuration: '4s' }}>
                                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600">
                                     <Box className="w-5 h-5" />
                                 </div>
@@ -267,11 +349,10 @@ export default function HomePage() {
                     <div className="max-w-7xl mx-auto px-6 py-10 text-center">
                         <p className="text-xs font-medium uppercase tracking-widest text-[var(--text-muted)] mb-8">Trusted by sellers across major platforms</p>
                         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                            {/* Logo Placeholders using Text for accuracy as requested */}
                             <span className="text-xl font-bold tracking-tight font-sans text-[var(--text-main)]">shopify</span>
                             <span className="text-xl font-bold tracking-tight font-serif italic text-[var(--text-main)]">Etsy</span>
                             <span className="text-xl font-bold tracking-tight text-[var(--text-main)]">WooCommerce</span>
-                            <span className="text-xl font-bold tracking-tight text-[var(--text-main)] flex items-center gap-1"><i className="w-5 h-5" /> TikTok Shop</span>
+                            <span className="text-xl font-bold tracking-tight text-[var(--text-main)] flex items-center gap-1"><Music2 className="w-5 h-5" /> TikTok Shop</span>
                             <span className="text-xl font-bold tracking-tight text-[var(--text-main)] flex items-center gap-1">amazon</span>
                         </div>
                     </div>
@@ -282,7 +363,7 @@ export default function HomePage() {
                     <div className="text-center mb-16 reveal">
                         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text-main)] mb-4">
                             Fulfillment is more than shipping<br className="hidden md:block" />
-                            <span className="text-[var(--text-muted)]">it’s an operational system.</span>
+                            <span className="text-[var(--text-muted)]">it&apos;s an operational system.</span>
                         </h2>
                     </div>
 
@@ -341,7 +422,7 @@ export default function HomePage() {
                 </section>
 
                 {/* Core Features Grid */}
-                <section id="features" className="py-24 bg-brand-50/50 dark:bg-brand-950/20 border-y border-[var(--card-border)]">
+                <section id="features" className="py-24 bg-brand-50/50 dark:bg-zinc-900/30 border-y border-[var(--card-border)]">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="mb-16 md:w-2/3 reveal">
                             <h2 className="text-3xl font-semibold tracking-tight text-[var(--text-main)] mb-4">Everything you need to run<br />fulfillment at scale</h2>
@@ -402,6 +483,11 @@ export default function HomePage() {
                 </section>
 
                 {/* QR Sticker Highlight */}
+                {/* STRICT REPLICATION: 
+                    HTML Line 477: <div class="bg-[var(--card-main)] dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-950 rounded-3xl border border-[var(--card-border)] overflow-hidden">
+                    HTML Line 506: <div class="bg-zinc-100 dark:bg-black/50 p-10 lg:p-16 flex items-center justify-center relative overflow-hidden">
+                    HTML Line 510: <div class="relative w-80 h-48 bg-white text-black rounded-lg shadow-2xl p-4 flex flex-col justify-between transform rotate-1 hover:rotate-0 transition-transform duration-500 reveal delay-200">
+                */}
                 <section className="py-24 max-w-7xl mx-auto px-6">
                     <div className="bg-[var(--card-main)] dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-950 rounded-3xl border border-[var(--card-border)] overflow-hidden">
                         <div className="grid lg:grid-cols-2">
@@ -435,7 +521,7 @@ export default function HomePage() {
                             <div className="bg-zinc-100 dark:bg-black/50 p-10 lg:p-16 flex items-center justify-center relative overflow-hidden">
                                 <div className="absolute inset-0 bg-grid opacity-50"></div>
 
-                                {/* Sticker Mockup */}
+                                {/* Sticker Mockup - EXACTLY as HTML: bg-white text-black */}
                                 <div className="relative w-80 h-48 bg-white text-black rounded-lg shadow-2xl p-4 flex flex-col justify-between transform rotate-1 hover:rotate-0 transition-transform duration-500 reveal delay-200">
                                     <div className="flex justify-between items-start border-b border-gray-100 pb-2">
                                         <div>
@@ -455,7 +541,6 @@ export default function HomePage() {
                                         </div>
                                         <div className="flex-1">
                                             <div className="text-[10px] text-gray-400 mb-1">STATUS UPDATE</div>
-                                            {/* CSS QR Code Simulation */}
                                             <div className="w-16 h-16 bg-white border border-gray-200 p-1">
                                                 <div className="w-full h-full bg-black qr-pattern opacity-90"></div>
                                             </div>
@@ -463,7 +548,7 @@ export default function HomePage() {
                                     </div>
 
                                     <div className="text-[9px] text-gray-300 text-center mt-2 tracking-widest">
-                                        [BRAND_NAME] FULFILLMENT SYSTEM
+                                        emfulfill FULFILLMENT SYSTEM
                                     </div>
                                 </div>
                             </div>
@@ -480,46 +565,39 @@ export default function HomePage() {
                         </div>
 
                         <div className="relative">
-                            {/* Connecting Line (Desktop) */}
                             <div className="hidden lg:block absolute top-1/2 left-0 w-full h-0.5 bg-[var(--card-border)] -translate-y-1/2 z-0"></div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 relative z-10">
-                                {/* Step 1 */}
                                 <div className="reveal relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-brand-500 text-brand-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform">1</div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">Wallet Top-up</h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Secure prepaid funding.</p>
                                 </div>
 
-                                {/* Step 2 */}
                                 <div className="reveal delay-100 relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">2</div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">Import Orders</h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Excel or API sync.</p>
                                 </div>
 
-                                {/* Step 3 */}
                                 <div className="reveal delay-200 relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">3</div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">Processing</h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-2 px-2">System creates jobs.</p>
                                 </div>
 
-                                {/* Step 4 */}
                                 <div className="reveal delay-300 relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">4</div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">QR Printing</h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Dual stickers generated.</p>
                                 </div>
 
-                                {/* Step 5 */}
                                 <div className="reveal delay-400 relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">5</div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">Production</h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Scan &amp; Create.</p>
                                 </div>
 
-                                {/* Step 6 */}
                                 <div className="reveal delay-500 relative flex flex-col items-center text-center group">
                                     <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-emerald-500 text-emerald-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform"><Check className="w-5 h-5" /></div>
                                     <h4 className="font-semibold text-sm text-[var(--text-main)]">Shipping</h4>
@@ -533,7 +611,6 @@ export default function HomePage() {
                 {/* Integrations & Pricing Teaser */}
                 <section id="pricing" className="py-24 max-w-7xl mx-auto px-6">
                     <div className="grid md:grid-cols-2 gap-8 mb-8">
-                        {/* Integration Box */}
                         <div className="reveal p-8 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl relative overflow-hidden">
                             <div className="absolute inset-0 bg-black/10"></div>
                             <div className="relative z-10">
@@ -548,10 +625,9 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        {/* Pricing Box */}
                         <div className="reveal delay-100 p-8 rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] flex flex-col justify-center text-center">
                             <h3 className="text-2xl font-bold text-[var(--text-main)] mb-2">Flexible Pricing</h3>
-                            <p className="text-[var(--text-muted)] mb-8">We don't charge monthly subscription fees. Pricing is based purely on order volume and product type.</p>
+                            <p className="text-[var(--text-muted)] mb-8">We don&apos;t charge monthly subscription fees. Pricing is based purely on order volume and product type.</p>
                             <button className="mx-auto px-6 py-3 rounded-full border border-[var(--card-border)] text-[var(--text-main)] hover:border-brand-500 hover:text-brand-600 transition-colors font-medium text-sm">
                                 Get a Custom Quote
                             </button>
@@ -569,7 +645,7 @@ export default function HomePage() {
                             <Star className="w-5 h-5 fill-current" />
                             <Star className="w-5 h-5 fill-current" />
                         </div>
-                        <h3 className="text-xl md:text-2xl font-medium text-[var(--text-main)] mb-6">"This system streamlined our production and reduced errors dramatically. Scaling from 20 to 200 orders per day became manageable."</h3>
+                        <h3 className="text-xl md:text-2xl font-medium text-[var(--text-main)] mb-6">&quot;This system streamlined our production and reduced errors dramatically. Scaling from 20 to 200 orders per day became manageable.&quot;</h3>
                         <p className="text-sm font-semibold text-[var(--text-muted)]">— Director of Operations, Apparel Co.</p>
                     </div>
                 </section>
@@ -577,7 +653,6 @@ export default function HomePage() {
                 {/* Final CTA */}
                 <section className="py-24 px-6">
                     <div className="max-w-5xl mx-auto rounded-3xl bg-[var(--text-main)] text-[var(--bg-body)] px-6 py-16 md:py-20 text-center relative overflow-hidden reveal">
-                        {/* Decorative background elements */}
                         <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
                             <div className="absolute -top-24 -right-24 w-64 h-64 bg-brand-500 rounded-full blur-3xl"></div>
                             <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-accent-500 rounded-full blur-3xl"></div>
@@ -587,9 +662,17 @@ export default function HomePage() {
                             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Ready to streamline your<br />fulfillment operations?</h2>
                             <p className="text-lg opacity-80 mb-10 max-w-xl mx-auto">Join the new standard in dropshipping and POD logistics today.</p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <button className="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform">
-                                    Request a Demo
-                                </button>
+                                {isLoggedIn ? (
+                                    <a href="/dashboard" className="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                        <Home className="w-4 h-4" />
+                                        Go to Dashboard
+                                    </a>
+                                ) : (
+                                    <a href="/register" className="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                        Register
+                                        <UserPlus className="w-4 h-4" />
+                                    </a>
+                                )}
                                 <button className="px-8 py-3.5 rounded-full border border-[var(--bg-body)]/30 hover:bg-[var(--bg-body)]/10 transition-colors text-sm font-medium">
                                     Get a Quote
                                 </button>
@@ -634,7 +717,7 @@ export default function HomePage() {
 
                     <div className="pt-8 border-t border-[var(--card-border)] flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="text-xs text-[var(--text-muted)]">
-                            © 2026 emfulfill. All rights reserved.
+                            © 2023 emfulfill Fulfillment. All rights reserved.
                         </div>
                         <div className="flex gap-4">
                             <a href="#" className="text-[var(--text-muted)] hover:text-[var(--text-main)]"><Twitter className="w-4 h-4" /></a>

@@ -49,20 +49,18 @@ export default function ProductDetail({ product }: ProductDetailProps) {
     const [activeImage, setActiveImage] = useState<string>('');
 
     // Safety fix for images
-    let images: string[] = [];
-    try {
-        if (typeof product.images === 'string') {
-            images = JSON.parse(product.images);
-        } else if (Array.isArray(product.images)) {
-            images = product.images;
-        } else {
-            images = [];
-        }
-    } catch (e) { images = []; }
+    const images: string[] = useMemo(() => {
+        try {
+            if (typeof product.images === 'string') return JSON.parse(product.images);
+            if (Array.isArray(product.images)) return product.images;
+            if (product.image) return [product.image]; // Fallback
+            return [];
+        } catch (e) { return []; }
+    }, [product]);
 
     useEffect(() => {
-        if (images.length > 0) setActiveImage(images[0]);
-    }, [images]);
+        if (images.length > 0 && !activeImage) setActiveImage(images[0]);
+    }, [images, activeImage]);
 
     // Data Processing
     const uniqueColors = useMemo(() => {
@@ -95,23 +93,19 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         if (!selectedSize && uniqueSizes.length > 0) setSelectedSize(uniqueSizes[0]);
     }, [uniqueColors, uniqueSizes]);
 
-
-
-
-
     return (
-        <div className="p-6 max-w-[1400px] mx-auto bg-gray-50 min-h-screen">
+        <div className="p-6 max-w-[1400px] mx-auto min-h-screen">
             <div className="mb-6">
-                <Link href="/dashboard/catalog" className="text-gray-500 hover:text-blue-600 flex items-center gap-2 transition-colors">
+                <Link href="/dashboard/catalog" className="text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 transition-colors">
                     <ArrowLeftOutlined /> Back to Catalogs
                 </Link>
             </div>
 
-            <Card className="shadow-lg border-0 rounded-xl overflow-hidden">
+            <div className="glass-panel p-8 rounded-2xl">
                 <Row gutter={[48, 40]}>
                     {/* Left Column: Images */}
                     <Col xs={24} md={12} lg={10}>
-                        <div className="border border-gray-100 rounded-xl overflow-hidden bg-white flex items-center justify-center p-8 mb-4 relative aspect-square group">
+                        <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-white dark:bg-zinc-800/50 flex items-center justify-center p-8 mb-4 relative aspect-square group">
                             <img
                                 src={activeImage || '/placeholder.png'}
                                 alt={product.name}
@@ -125,8 +119,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                         key={idx}
                                         onClick={() => setActiveImage(img)}
                                         className={`
-                                            w-20 h-20 border-2 rounded-lg p-1 cursor-pointer transition-all flex-shrink-0
-                                            ${activeImage === img ? 'border-blue-500 shadow-md transform -translate-y-1' : 'border-gray-200 hover:border-blue-300'}
+                                            w-20 h-20 border-2 rounded-lg p-1 cursor-pointer transition-all flex-shrink-0 bg-white dark:bg-zinc-800
+                                            ${activeImage === img ? 'border-blue-500 shadow-md transform -translate-y-1' : 'border-zinc-200 dark:border-zinc-700 hover:border-blue-300'}
                                         `}
                                     >
                                         <img src={img} className="w-full h-full object-contain rounded-md" alt={`Thumbnail ${idx}`} />
@@ -140,35 +134,34 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                     <Col xs={24} md={12} lg={14}>
                         <div className="flex flex-col h-full">
                             <div>
-                                <Tag color="blue" className="mb-2 uppercase tracking-wide text-xs font-bold border-0 bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+                                <Tag className="mb-2 uppercase tracking-wide text-xs font-bold border-none bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full">
                                     {product.category || 'Apparel'}
                                 </Tag>
-                                <Title level={1} className="!mb-2 !mt-0 text-gray-800 tracking-tight" style={{ fontSize: '2.5rem' }}>
+                                <h1 className="text-4xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent mb-2 mt-0 tracking-tight">
                                     {product.name}
-                                </Title>
+                                </h1>
                                 <div className="flex items-center gap-4 mb-6">
-                                    <Paragraph className="!mb-0 text-gray-400 font-mono text-sm uppercase">SKU: {product.sku}</Paragraph>
-                                    <div className="h-4 w-px bg-gray-300"></div>
+                                    <span className="text-zinc-400 font-mono text-sm uppercase">SKU: {product.sku}</span>
+                                    <div className="h-4 w-px bg-zinc-300 dark:bg-zinc-700"></div>
                                     <RateDisplay />
                                 </div>
 
                                 <div className="mb-8">
-                                    <Text className="text-4xl font-bold text-gray-900 font-sans">
+                                    <span className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 font-sans">
                                         ${typeof displayPrice === 'number' ? displayPrice.toFixed(2) : displayPrice}
-                                    </Text>
-                                    {/* Optional: Add compare at price if available */}
+                                    </span>
                                 </div>
                             </div>
 
-                            <Divider className="my-6 border-gray-100" />
+                            <Divider className="my-6 border-zinc-200 dark:border-zinc-700" />
 
                             {/* Variants Selection */}
                             <div className="space-y-8">
                                 {/* Color Selector */}
                                 {uniqueColors.length > 0 && (
                                     <div>
-                                        <Text className="block text-sm font-semibold text-gray-500 uppercase tracking-widest mb-3">
-                                            Selected Color: <span className="text-gray-900">{selectedColor}</span>
+                                        <Text className="block text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-3">
+                                            Selected Color: <span className="text-zinc-900 dark:text-zinc-100">{selectedColor}</span>
                                         </Text>
                                         <div className="flex flex-wrap gap-3">
                                             {uniqueColors.map((color) => {
@@ -202,8 +195,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                 {/* Size Selector */}
                                 {uniqueSizes.length > 0 && (
                                     <div>
-                                        <Text className="block text-sm font-semibold text-gray-500 uppercase tracking-widest mb-3">
-                                            Selected Size: <span className="text-gray-900">{selectedSize}</span>
+                                        <Text className="block text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-3">
+                                            Selected Size: <span className="text-zinc-900 dark:text-zinc-100">{selectedSize}</span>
                                         </Text>
                                         <div className="flex flex-wrap gap-3">
                                             {uniqueSizes.sort(sortSizes).map((size) => {
@@ -215,8 +208,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                                         className={`
                                                             min-w-[50px] px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border
                                                             ${isActive
-                                                                ? 'bg-gray-900 text-white border-gray-900 shadow-lg'
-                                                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-900 hover:bg-gray-50'
+                                                                ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-lg'
+                                                                : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
                                                             }
                                                         `}
                                                     >
@@ -229,11 +222,9 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                 )}
                             </div>
 
-
-
                             <div className="mt-6 space-y-2">
-                                <Text strong className="block text-sm text-gray-900">Description</Text>
-                                <Paragraph className="text-gray-500 leading-relaxed max-w-prose">
+                                <Text strong className="block text-sm text-zinc-900 dark:text-zinc-100">Description</Text>
+                                <Paragraph className="text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-prose">
                                     {product.description || 'Premium quality product designed for comfort and style. Featuring durable materials and modern fit.'}
                                 </Paragraph>
                             </div>
@@ -248,22 +239,22 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                         if (rates.length > 0) {
                                             return (
                                                 <div>
-                                                    <Title level={4} className="mb-3 text-gray-800">Shipping Rates</Title>
-                                                    <div className="overflow-hidden border border-gray-200 rounded-lg">
-                                                        <table className="min-w-full divide-y divide-gray-200">
-                                                            <thead className="bg-gray-50">
+                                                    <h4 className="mb-3 text-zinc-800 dark:text-zinc-200 font-bold">Shipping Rates</h4>
+                                                    <div className="overflow-hidden border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                                                        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
+                                                            <thead className="bg-zinc-50 dark:bg-zinc-800/50">
                                                                 <tr>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator</th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping Fees</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Operator</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Quantity</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Shipping Fees</th>
                                                                 </tr>
                                                             </thead>
-                                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                            <tbody className="bg-white dark:bg-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-700">
                                                                 {rates.map((rate: any, idx: number) => (
                                                                     <tr key={idx}>
-                                                                        <td className="px-4 py-3 text-sm text-gray-700">{rate.operator}</td>
-                                                                        <td className="px-4 py-3 text-sm text-gray-700">{rate.quantity}</td>
-                                                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">${rate.shippingFee}</td>
+                                                                        <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">{rate.operator}</td>
+                                                                        <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">{rate.quantity}</td>
+                                                                        <td className="px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">${rate.shippingFee}</td>
                                                                     </tr>
                                                                 ))}
                                                             </tbody>
@@ -282,26 +273,26 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                         if (fees.length > 0) {
                                             return (
                                                 <div>
-                                                    <Title level={4} className="mb-3 text-gray-800">Extra Fees</Title>
-                                                    <div className="overflow-hidden border border-gray-200 rounded-lg">
-                                                        <table className="min-w-full divide-y divide-gray-200">
-                                                            <thead className="bg-gray-50">
+                                                    <h4 className="mb-3 text-zinc-800 dark:text-zinc-200 font-bold">Extra Fees</h4>
+                                                    <div className="overflow-hidden border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                                                        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
+                                                            <thead className="bg-zinc-50 dark:bg-zinc-800/50">
                                                                 <tr>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Surcharge</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Position</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Type</th>
+                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Surcharge</th>
                                                                 </tr>
                                                             </thead>
-                                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                            <tbody className="bg-white dark:bg-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-700">
                                                                 {fees.map((fee: any, idx: number) => (
                                                                     <tr key={idx}>
-                                                                        <td className="px-4 py-3 text-sm text-gray-700">{fee.position}</td>
-                                                                        <td className="px-4 py-3 text-sm text-gray-700">
-                                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">{fee.position}</td>
+                                                                        <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+                                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                                                                 {fee.type}
                                                                             </span>
                                                                         </td>
-                                                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">${fee.surcharge}</td>
+                                                                        <td className="px-4 py-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">${fee.surcharge}</td>
                                                                     </tr>
                                                                 ))}
                                                             </tbody>
@@ -317,7 +308,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                         </div>
                     </Col>
                 </Row>
-            </Card>
+            </div>
         </div>
     );
 }

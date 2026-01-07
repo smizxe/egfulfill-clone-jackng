@@ -22,6 +22,7 @@ export async function POST(request: Request) {
                     sku,
                     name,
                     isActive: isActive ?? true,
+                    images: JSON.stringify(body.images || []),
                     shippingRates: body.shippingRates,
                     extraFees: body.extraFees
                 }

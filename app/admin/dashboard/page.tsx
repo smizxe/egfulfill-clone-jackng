@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import React from 'react';
-import { Card, Row, Col, Statistic } from 'antd';
+import { Row, Col } from 'antd';
 import { UserOutlined, ShoppingOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons';
 
 export default async function AdminOverviewPage() {
@@ -15,56 +15,51 @@ export default async function AdminOverviewPage() {
     });
     const totalBalance = walletAgg._sum.balance || 0;
 
+    const stats = [
+        { title: 'Total Sellers', value: sellersCount, icon: <TeamOutlined />, color: '#10b981' },
+        { title: 'Total Products', value: productsCount, icon: <ShoppingOutlined />, color: '#3b82f6' },
+        { title: 'Total Orders', value: ordersCount, icon: <UserOutlined />, color: '#8b5cf6' },
+        { title: 'Held Balance', value: totalBalance, icon: <DollarOutlined />, color: '#f43f5e', prefix: '$' },
+    ];
+
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-6">Admin Overview</h2>
-            <Row gutter={16}>
-                <Col span={6}>
-                    <Card variant="borderless">
-                        <Statistic
-                            title="Total Sellers"
-                            value={sellersCount}
-                            prefix={<TeamOutlined />}
-                            styles={{ content: { color: '#3f8600' } }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card variant="borderless">
-                        <Statistic
-                            title="Total Products"
-                            value={productsCount}
-                            prefix={<ShoppingOutlined />}
-                            styles={{ content: { color: '#1890ff' } }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card variant="borderless">
-                        <Statistic
-                            title="Total Orders"
-                            value={ordersCount}
-                            prefix={<UserOutlined />}
-                            styles={{ content: { color: '#722ed1' } }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card variant="borderless">
-                        <Statistic
-                            title="Wallet Balances Hold"
-                            value={totalBalance}
-                            precision={2}
-                            prefix={<DollarOutlined />}
-                            styles={{ content: { color: '#cf1322' } }}
-                        />
-                    </Card>
-                </Col>
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 dark:from-pink-300 dark:to-purple-400 bg-clip-text text-transparent">
+                    Admin Overview
+                </h2>
+            </div>
+
+            <Row gutter={[24, 24]}>
+                {stats.map((stat, index) => (
+                    <Col xs={24} sm={12} md={6} key={index}>
+                        <div className="glass-card rounded-2xl p-6 h-full flex flex-col justify-between group">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">
+                                        {stat.title}
+                                    </p>
+                                    <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                                        {stat.prefix}{stat.value.toLocaleString()}
+                                    </h3>
+                                </div>
+                                <div
+                                    className="p-3 rounded-xl bg-opacity-10 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
+                                    style={{ backgroundColor: `${stat.color}20`, color: stat.color }}
+                                >
+                                    {stat.icon}
+                                </div>
+                            </div>
+                        </div>
+                    </Col>
+                ))}
             </Row>
 
-            <div style={{ marginTop: 24, padding: 24, background: '#fff', borderRadius: 8 }}>
-                <h3>Welcome back, Admin</h3>
-                <p className="text-gray-500">Select a section from the sidebar to manage the platform.</p>
+            <div className="mt-8">
+                <div className="glass-panel rounded-2xl p-8">
+                    <h3 className="text-xl font-bold mb-2 text-zinc-900 dark:text-zinc-100">System Status</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400">Select a section from the sidebar to manage the platform.</p>
+                </div>
             </div>
         </div>
     );
