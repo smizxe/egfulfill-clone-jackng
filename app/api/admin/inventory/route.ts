@@ -122,66 +122,84 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { sku, color, size, stock, type } = body;
 
-        // We expect SKU, Color, Size to identify the item. 
-        // If ID is passed, we might use it, but SKU+Color+Size is safer for UPSERT.
+        // Support both single update and bulk update (array)
+        const updates = Array.isArray(body) ? body : [body];
 
-        if (!sku) return NextResponse.json({ error: 'SKU required' }, { status: 400 });
-
-        const safeColor = color || '';
-        const safeSize = size || '';
-
-        // Find existing to calc diff
-        const existing = await prisma.inventoryItem.findUnique({
-            where: {
-                sku_color_size: { sku, color: safeColor, size: safeSize }
-            }
-        });
-
-        const oldStock = existing?.onHand || 0;
-        const diff = stock - oldStock;
-
-        if (diff === 0 && existing) {
-            return NextResponse.json(existing);
+        if (updates.length === 0) {
+            return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
         }
 
-        const updated = await prisma.$transaction(async (tx) => {
-            const item = await tx.inventoryItem.upsert({
-                where: {
-                    sku_color_size: { sku, color: safeColor, size: safeSize }
-                },
-                update: {
-                    onHand: stock
-                },
-                create: {
-                    sku,
-                    color: safeColor,
-                    size: safeSize,
-                    onHand: stock,
-                    reserved: 0
-                }
-            });
+        const results = await prisma.$transaction(async (tx) => {
+            const updatedItems = [];
 
-            // Log movement
-            await tx.inventoryMovement.create({
-                data: {
-                    sku,
-                    color: safeColor,
-                    size: safeSize,
-                    qtyChange: diff,
-                    type: type || 'AUDIT_ADJUST',
-                    refType: 'MANUAL',
-                    createdById: 'ADMIN' // Request user ID integration later
-                }
-            });
+            for (const update of updates) {
+                const { sku, color, size, stock, type } = update;
 
-            return item;
+                if (!sku) {
+                    throw new Error('SKU required for each update');
+                }
+
+                const safeColor = color || '';
+                const safeSize = size || '';
+
+                // Find existing to calc diff
+                const existing = await tx.inventoryItem.findUnique({
+                    where: {
+                        sku_color_size: { sku, color: safeColor, size: safeSize }
+                    }
+                });
+
+                const oldStock = existing?.onHand || 0;
+                const diff = stock - oldStock;
+
+                // Skip if no change
+                if (diff === 0 && existing) {
+                    updatedItems.push(existing);
+                    continue;
+                }
+
+                const item = await tx.inventoryItem.upsert({
+                    where: {
+                        sku_color_size: { sku, color: safeColor, size: safeSize }
+                    },
+                    update: {
+                        onHand: stock
+                    },
+                    create: {
+                        sku,
+                        color: safeColor,
+                        size: safeSize,
+                        onHand: stock,
+                        reserved: 0
+                    }
+                });
+
+                // Log movement only if there's a change
+                if (diff !== 0) {
+                    await tx.inventoryMovement.create({
+                        data: {
+                            sku,
+                            color: safeColor,
+                            size: safeSize,
+                            qtyChange: diff,
+                            type: type || 'AUDIT_ADJUST',
+                            refType: 'MANUAL',
+                            createdById: 'ADMIN'
+                        }
+                    });
+                }
+
+                updatedItems.push(item);
+            }
+
+            return updatedItems;
         });
 
-        return NextResponse.json(updated);
-    } catch (error) {
+        // Return single item for single update, array for bulk
+        return NextResponse.json(Array.isArray(body) ? results : results[0]);
+    } catch (error: any) {
         console.error("Inventory Update Error:", error);
-        return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Update failed' }, { status: 500 });
     }
 }
