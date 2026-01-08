@@ -187,7 +187,7 @@ export async function POST(request: Request) {
                             qtyChange: diff,
                             type: type || 'AUDIT_ADJUST',
                             refType: 'MANUAL',
-                            createdById: 'ADMIN'
+                            createdById: null // Set to null for admin actions without specific user ID
                         }
                     });
                 }
