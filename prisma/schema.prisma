@@ -22,6 +22,7 @@ model User {
   confirmedTopups    TopupRequest[]      @relation("ConfirmedBy")
   seller             Seller?             @relation(fields: [sellerId], references: [id])
   verificationTokens VerificationToken[]
+  assignedJobs       Job[]               @relation("JobStaff")
 }
 
 model VerificationToken {
@@ -106,8 +107,20 @@ model Product {
   updatedAt     DateTime         @updatedAt
   extraFees     String?
   shippingRates String?
-  images        String           @default("[]")
+  description   String?
+  images        String           @default("[]") // Deprecated: Use ProductImage relation
   variants      ProductVariant[]
+  productImages ProductImage[]
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 model ProductVariant {
@@ -196,6 +209,8 @@ model Job {
   priceToCharge       Float
   cogsActual          Float?
   notes               String?
+  assignedStaffId     String?
+  assignedStaff       User?     @relation("JobStaff", fields: [assignedStaffId], references: [id])
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   seller              Seller    @relation(fields: [sellerId], references: [id])
@@ -204,6 +219,7 @@ model Job {
 
   @@index([sellerId])
   @@index([status])
+  @@index([assignedStaffId])
 }
 
 model QrToken {

@@ -9,17 +9,50 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
         const product = await prisma.$transaction(async (tx) => {
             // 1. Update Product Info
+            const imageList = Array.isArray(body.images) ? body.images : (body.images ? [body.images] : []);
+
             const updatedProduct = await tx.product.update({
                 where: { id },
                 data: {
                     name,
                     sku,
                     isActive,
-                    images: JSON.stringify(body.images || []),
+                    description: body.description,
+                    images: JSON.stringify(imageList), // Backward compatibility
                     shippingRates: body.shippingRates,
                     extraFees: body.extraFees
                 },
             });
+
+            // 1.5 Sync Product Images
+            // Fetch existing images
+            const existingImages = await tx.productImage.findMany({
+                where: { productId: id },
+                select: { id: true, url: true } // Need URL to compare
+            });
+            const existingUrls = existingImages.map(img => img.url);
+
+            // Determine images to add and remove
+            const urlsToAdd = imageList.filter((url: string) => !existingUrls.includes(url));
+            const urlsToRemove = existingUrls.filter(url => !imageList.includes(url));
+
+            if (urlsToRemove.length > 0) {
+                await tx.productImage.deleteMany({
+                    where: {
+                        productId: id,
+                        url: { in: urlsToRemove }
+                    }
+                });
+            }
+
+            if (urlsToAdd.length > 0) {
+                await tx.productImage.createMany({
+                    data: urlsToAdd.map((url: string) => ({
+                        productId: id,
+                        url: url
+                    }))
+                });
+            }
 
             if (Array.isArray(variants)) {
                 // 2. Manage Variants

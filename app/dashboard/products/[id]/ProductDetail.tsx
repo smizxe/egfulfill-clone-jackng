@@ -222,12 +222,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                                 )}
                             </div>
 
-                            <div className="mt-6 space-y-2">
-                                <Text strong className="block text-sm text-zinc-900 dark:text-zinc-100">Description</Text>
-                                <Paragraph className="text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-prose">
-                                    {product.description || 'Premium quality product designed for comfort and style. Featuring durable materials and modern fit.'}
-                                </Paragraph>
-                            </div>
+                            {/* Description moved to bottom */}
 
                             {/* Shipping Rates & Fees */}
                             {(product.shippingRates || product.extraFees) && (
@@ -308,6 +303,16 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                         </div>
                     </Col>
                 </Row>
+
+                {/* Full Width Description Section */}
+                <Divider className="my-8 border-zinc-200 dark:border-zinc-700" />
+                <div className="mt-8">
+                    <Title level={3} className="mb-6 text-zinc-900 dark:text-zinc-100">Product Description</Title>
+                    <div
+                        className="prose dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-300"
+                        dangerouslySetInnerHTML={{ __html: product.description || '<p>No description available.</p>' }}
+                    />
+                </div>
             </div>
         </div>
     );

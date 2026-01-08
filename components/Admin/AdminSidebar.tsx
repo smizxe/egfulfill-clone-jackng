@@ -39,6 +39,7 @@ export default function AdminSidebar({ collapsed, onCollapse }: AdminSidebarProp
         // { key: '/admin/tickets', icon: <CustomerServiceOutlined />, label: 'Tickets' }, // Not implemented
         { key: '/admin/production', icon: <PrinterOutlined />, label: 'Production Release' },
         { key: '/admin/shipping', icon: <TruckOutlined />, label: 'Shipping' },
+        { key: '/admin/staff', icon: <UserOutlined />, label: 'Staff' },
         // { key: '/admin/print', icon: <PrinterOutlined />, label: 'Print Labels' }, // Removed per request
     ];
 

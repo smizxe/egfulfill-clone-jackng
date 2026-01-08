@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Switch, message, Select, InputNumber, Table, Checkbox, Divider, Button, Upload } from 'antd';
+import { Modal, Form, Input, Switch, Select, InputNumber, Table, Checkbox, Divider, Button, Upload, App } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
+import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
+import dynamic from 'next/dynamic';
+
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+import 'react-quill-new/dist/quill.snow.css';
 
 interface ProductModalProps {
     open: boolean;
@@ -12,9 +17,10 @@ interface ProductModalProps {
 }
 
 export default function ProductModal({ open, onCancel, onSuccess, product }: ProductModalProps) {
+    const { message } = App.useApp();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const isEdit = !!product;
 
@@ -37,13 +43,31 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                     sku: product.sku,
                     name: product.name,
                     isActive: product.isActive,
+                    description: product.description,
                     colors: product.colors || [],
                     sizes: product.sizes || [],
                     basePrice: product.basePrice || 0,
                     shippingRates: product.shippingRates ? JSON.parse(product.shippingRates) : [],
                     extraFees: product.extraFees ? JSON.parse(product.extraFees) : []
                 });
-                setImageUrl(product.image || null);
+
+                // Initialize flleList from images array or single image fallback
+                let initialImages = [];
+                try {
+                    initialImages = JSON.parse(product.images || '[]');
+                } catch (e) {
+                    // fall back if it was just a string? No, should be valid JSON if from API
+                }
+
+                // Construct UploadFile objects
+                const files: UploadFile[] = initialImages.map((url: string, index: number) => ({
+                    uid: `-${index}`,
+                    name: `image-${index}`,
+                    status: 'done',
+                    url: url,
+                }));
+
+                setFileList(files);
                 setCurrentColors(product.colors || []);
                 setCurrentSizes(product.sizes || []);
 
@@ -68,7 +92,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             } else {
                 form.resetFields();
                 form.setFieldsValue({ isActive: true, colors: [], sizes: [], basePrice: 0 });
-                setImageUrl(null);
+                setFileList([]);
                 setCurrentColors([]);
                 setCurrentSizes([]);
                 setColorAdjustments({});
@@ -79,7 +103,8 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
         }
     }, [open, product, form]);
 
-    const handleUpload = async (file: File) => {
+    const handleUpload = async (options: any) => {
+        const { onSuccess, onError, file } = options;
         setUploading(true);
         const formData = new FormData();
         formData.append('file', file);
@@ -91,16 +116,31 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             });
             const data = await res.json();
             if (data.url) {
-                setImageUrl(data.url);
-                message.success('Image uploaded successfully');
+                // message.success('Image uploaded successfully'); // Optional, to avoid spam
+                onSuccess(data.url);
             } else {
                 throw new Error(data.error || 'Upload failed');
             }
         } catch (error) {
             message.error('Upload failed');
+            onError(error);
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
+        // Map successful uploads to have URL if not present (antd does this for customRequest response?)
+        // With customRequest, 'response' in file is what we passed to onSuccess.
+
+        const updatedList = newFileList.map(file => {
+            if (file.response) {
+                file.url = file.response;
+            }
+            return file;
+        });
+
+        setFileList(updatedList);
     };
 
     const handleValuesChange = (changedValues: any, allValues: any) => {
@@ -161,7 +201,8 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             const payload = {
                 sku: values.sku,
                 name: values.name,
-                image: imageUrl,
+                description: values.description,
+                images: fileList.map(f => f.url).filter(Boolean),
                 isActive: values.isActive,
                 variants: variants,
                 shippingRates: JSON.stringify(values.shippingRates || []),
@@ -246,49 +287,42 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
                 layout="vertical"
                 onValuesChange={handleValuesChange}
             >
-                <div className="flex gap-4">
-                    <div className="w-1/4">
-                        <Form.Item label="Product Image">
-                            <Upload
-                                name="avatar"
-                                listType="picture-card"
-                                className="avatar-uploader"
-                                showUploadList={false}
-                                beforeUpload={(file) => {
-                                    handleUpload(file);
-                                    return false; // Prevent auto upload by antd
-                                }}
-                            >
-                                {imageUrl ? (
-                                    <img src={imageUrl} alt="product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div>
-                                        {uploading ? <LoadingOutlined /> : <PlusOutlined />}
-                                        <div style={{ marginTop: 8 }}>Upload</div>
-                                    </div>
-                                )}
-                            </Upload>
-                        </Form.Item>
-                    </div>
-                    <div className="w-3/4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <Form.Item name="sku" label="SKU" rules={[{ required: true }]}>
-                                <Input placeholder="E.g. TS-001" disabled={isEdit} />
-                            </Form.Item>
-                            <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>
-                                <Input placeholder="New Product" />
-                            </Form.Item>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
-                                <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="$" />
-                            </Form.Item>
-                            <Form.Item name="isActive" label="Status" valuePropName="checked">
-                                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-                            </Form.Item>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <Form.Item name="sku" label="SKU" rules={[{ required: true }]}>
+                        <Input placeholder="E.g. TS-001" disabled={isEdit} />
+                    </Form.Item>
+                    <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>
+                        <Input placeholder="New Product" />
+                    </Form.Item>
                 </div>
+
+                <Form.Item name="description" label="Description">
+                    <ReactQuill theme="snow" style={{ height: 200, marginBottom: 50 }} />
+                </Form.Item>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <Form.Item name="basePrice" label="Base Price ($)" rules={[{ required: true }]}>
+                        <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="$" />
+                    </Form.Item>
+                    <Form.Item name="isActive" label="Status" valuePropName="checked">
+                        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+                    </Form.Item>
+                </div>
+
+                <Form.Item label="Product Images">
+                    <Upload
+                        customRequest={handleUpload}
+                        listType="picture-card"
+                        fileList={fileList}
+                        onChange={handleChange}
+                        multiple
+                    >
+                        <div>
+                            <PlusOutlined />
+                            <div style={{ marginTop: 8 }}>Add Photos</div>
+                        </div>
+                    </Upload>
+                </Form.Item>
 
                 <Divider>Variants</Divider>
 

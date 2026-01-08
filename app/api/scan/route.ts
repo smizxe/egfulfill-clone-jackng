@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
     const body = await request.json();
@@ -10,6 +11,13 @@ export async function POST(request: Request) {
     }
 
     try {
+        const cookieStore = await cookies();
+        const userId = cookieStore.get('userId')?.value;
+
+        // If user is logged in, link this job update to them
+        let assignedStaffId: string | null = null;
+        if (userId) assignedStaffId = userId;
+
         let type = '';
         let jobIdStr = '';
 
@@ -27,13 +35,6 @@ export async function POST(request: Request) {
             where: { jobCode: jobIdStr },
             include: { order: true }
         });
-
-        // Note: In schema Job has 'productSku' but relation is not defined to Product directly in logic earlier?
-        // Schema: productId String?, productSku String?. Relation not defined in my prisma update earlier?
-        // Let's check schema definition I wrote in Step 20.
-        // model Job { ... productId String?, productSku String? ... } No @relation to Product.
-        // But Import logic put productId.
-        // I should have defined relation. But for now I'll fetch Product manually if needed.
 
         if (!job) {
             return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -60,23 +61,15 @@ export async function POST(request: Request) {
                 newStatus = 'IN_PROCESS';
                 messageStr = 'Job Started (In Process)';
 
-                // Logic: Reserve -> OnHand? No.
-                // Requirement: Scan S-JOB (Lan 1 - IN_PROCESS):
-                // KHO: Reserved -Qty, OnHand -Qty (Wait, this means Material Used?)
-                // Usually Reserved is deducted when Order created? 
-                // Requirement says: KHO: Reserved -Qty, OnHand -Qty. 
-                // This implies raw material is consumed.
-                // My Product Stock is "Finished Goods" or "Raw Material"? 
-                // If it's POD (Print on Demand), Stock is "Blanks" (Raw Material).
-                // So "Reserved" meant "Allocated for Job".
-                // Now "Used" means physically gone from shelf.
-                // So we decrement both. 
-
                 await prisma.$transaction([
                     prisma.job.update({
                         where: { id: job.id },
-                        data: { status: newStatus }
+                        data: {
+                            status: newStatus,
+                            assignedStaffId: assignedStaffId ?? undefined
+                        }
                     }),
+                    // Only decrement stock if moving from RECEIVED to IN_PROCESS (Start Production)
                     prisma.inventoryItem.updateMany({
                         where: {
                             sku: job.sku,
@@ -96,48 +89,43 @@ export async function POST(request: Request) {
                             qtyChange: -job.qty,
                             type: 'PRODUCTION_USE',
                             refType: 'JOB',
-                            refId: job.id
+                            refId: job.id,
+                            createdById: userId
                         }
                     })
-                    // Note: COGS Accounting entry could be added here
                 ]);
 
             } else if (job.status === 'IN_PROCESS') {
                 newStatus = 'COMPLETED';
                 messageStr = 'Job Completed';
 
-                await prisma.job.update({
-                    where: { id: job.id },
-                    data: { status: newStatus }
-                });
-
-                // Check if all jobs for this order are completed
-                const jobCount = await prisma.job.count({
-                    where: { orderId: job.orderId }
-                });
-                const completedCount = await prisma.job.count({
-                    where: { orderId: job.orderId, status: 'COMPLETED' }
-                });
-
-                // Note: The currently updated job is already 'COMPLETED' in DB by the update above?
-                // Wait, I ran update above. So fetch count should reflect it.
-                // Let's re-verify count.
-                // Actually, simpler:
-
-                const remainingJobs = await prisma.job.count({
-                    where: { orderId: job.orderId, status: { not: 'COMPLETED' } }
-                });
-
-                if (remainingJobs === 0) {
-                    await prisma.order.update({
-                        where: { id: job.orderId },
-                        data: { status: 'READY_TO_SHIP' }
+                await prisma.$transaction(async (tx) => {
+                    await tx.job.update({
+                        where: { id: job.id },
+                        data: {
+                            status: newStatus,
+                            assignedStaffId: assignedStaffId ?? undefined
+                        }
                     });
-                }
+
+                    // Check if all jobs for this order are completed
+                    const remainingJobs = await tx.job.count({
+                        where: { orderId: job.orderId, status: { not: 'COMPLETED' } }
+                    });
+
+                    if (remainingJobs === 0) {
+                        await tx.order.update({
+                            where: { id: job.orderId },
+                            data: { status: 'READY_TO_SHIP' }
+                        });
+                    }
+                });
+
             } else if (job.status === 'COMPLETED') {
                 return NextResponse.json({ error: 'Job is already COMPLETED' }, { status: 400 });
             }
 
+            // Return success response linked to the new status
             return NextResponse.json({
                 type: 'STATUS',
                 message: messageStr,

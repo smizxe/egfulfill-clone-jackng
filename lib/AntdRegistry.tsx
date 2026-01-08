@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider, theme as antTheme } from 'antd';
+import { ConfigProvider, theme as antTheme, App } from 'antd';
 import { useTheme } from '@/components/Providers/ThemeContext';
 
 const StyledComponentsRegistry = ({ children }: { children: React.ReactNode }) => {
@@ -33,7 +33,7 @@ const StyledComponentsRegistry = ({ children }: { children: React.ReactNode }) =
                             borderRadiusLG: 12,
                             headerBg: 'transparent',
                             colorBgContainer: 'transparent',
-                            rowHoverBg: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                            rowHoverBg: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
                         },
                         Card: {
                             colorBgContainer: 'transparent',
@@ -52,10 +52,13 @@ const StyledComponentsRegistry = ({ children }: { children: React.ReactNode }) =
                     }
                 }}
             >
-                {children}
+                <App>
+                    {children}
+                </App>
             </ConfigProvider>
         </AntdRegistry>
     );
 };
+
 
 export default StyledComponentsRegistry;
