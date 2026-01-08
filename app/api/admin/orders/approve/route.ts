@@ -24,13 +24,30 @@ export async function POST(request: Request) {
 
         const result = await prisma.$transaction(async (tx) => {
             if (action === 'APPROVE') {
-                // Update Order and Jobs to RECEIVED
+                // 1. Deduct Wallet Balance
+                await tx.wallet.update({
+                    where: { sellerId: order.sellerId },
+                    data: { balance: { decrement: order.totalAmount } }
+                });
+
+                // 2. Create Ledger Entry (DEBIT = charge)
+                await tx.walletLedger.create({
+                    data: {
+                        sellerId: order.sellerId,
+                        type: 'DEBIT',
+                        amount: order.totalAmount,
+                        refType: 'ORDER',
+                        refId: order.id,
+                        note: `Payment for Order ${order.orderCode}`
+                    }
+                });
+
+                // 3. Update Order and Jobs to RECEIVED
                 await tx.order.update({
                     where: { id: orderId },
                     data: { status: 'RECEIVED' }
                 });
 
-                // Batch update jobs
                 await tx.job.updateMany({
                     where: { orderId: orderId },
                     data: { status: 'RECEIVED' }
@@ -49,31 +66,13 @@ export async function POST(request: Request) {
                     data: { status: 'REJECTED' }
                 });
 
-                // 2. Refund Wallet
-                await tx.wallet.update({
-                    where: { sellerId: order.sellerId },
-                    data: { balance: { increment: order.totalAmount } }
-                });
+                // 2. NO wallet refund needed - balance was never deducted during import
+                // (Deduction only happens on APPROVE)
 
-                // 3. Ledger Entry
-                await tx.walletLedger.create({
-                    data: {
-                        sellerId: order.sellerId,
-                        type: 'CREDIT', // Refund is a credit
-                        amount: order.totalAmount,
-                        refType: 'ORDER',
-                        refId: order.id,
-                        note: `Refund for Rejected Order ${order.orderCode}. Reason: ${reason || 'N/A'}`
-                    }
-                });
-
-                // 4. Revert Inventory Reservation?
-                // Yes, if we reserved on Import, we should unreserve now.
+                // 3. Revert Inventory Reservation
                 for (const job of order.jobs) {
                     const invColor = job.color || "";
                     const invSize = job.size || "";
-                    // Be careful with unique constraint, use loop or batch if possible.
-                    // Doing loop is safest for logic.
                     await tx.inventoryItem.update({
                         where: {
                             sku_color_size: {

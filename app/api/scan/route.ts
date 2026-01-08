@@ -57,9 +57,24 @@ export async function POST(request: Request) {
             let newStatus = '';
             let messageStr = '';
 
+            // Require Login for Status Updates
+            if (!userId) {
+                return NextResponse.json({ error: 'Authentication required. Please login as Staff.' }, { status: 401 });
+            }
+
+            // Verify User Role (Must be ADMIN or STAFF)
+            const staffUser = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { role: true, email: true }
+            });
+
+            if (!staffUser || (staffUser.role !== 'ADMIN' && staffUser.role !== 'STAFF')) {
+                return NextResponse.json({ error: 'Unauthorized. Only Staff or Admin can update status.' }, { status: 403 });
+            }
+
             if (job.status === 'RECEIVED') {
                 newStatus = 'IN_PROCESS';
-                messageStr = 'Job Started (In Process)';
+                messageStr = `Job Started by ${staffUser.email}`;
 
                 await prisma.$transaction([
                     prisma.job.update({

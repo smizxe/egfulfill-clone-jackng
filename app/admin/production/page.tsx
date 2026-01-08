@@ -13,6 +13,7 @@ interface Job {
     size: string | null;
     quantity: number; // Corrected from qty based on schema: schema says qty Int @default(1)
     qty: number; // schema field is `qty`
+    assignedStaff?: { email: string };
     createdAt: string;
     recipientName: string;
 }
@@ -77,6 +78,15 @@ export default function ProductionPage() {
             dataIndex: 'qty',
             key: 'qty',
             width: 80
+        },
+        {
+            title: 'Processed By',
+            key: 'processedBy',
+            render: (_: any, r: Job) => (
+                <span className="text-gray-600 text-sm">
+                    {r.assignedStaff?.email || '-'}
+                </span>
+            )
         },
         {
             title: 'Status',
