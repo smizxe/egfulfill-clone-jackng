@@ -9,28 +9,37 @@ const STALLION_API_TOKEN = process.env.STALLION_API_TOKEN || '';
 interface StallionAddress {
     name: string;
     company?: string;
-    street1: string;
-    street2?: string;
+    address1: string;  // Stallion v4 uses address1, not street1
+    address2?: string;
     city: string;
-    province_code: string; // e.g., "ON" for Ontario
+    province_code: string;
     postal_code: string;
-    country_code: string; // e.g., "CA" or "US"
+    country_code: string;
     phone?: string;
     email?: string;
 }
 
-interface StallionPackage {
-    weight_kg: number;
-    length_cm?: number;
-    width_cm?: number;
-    height_cm?: number;
-}
-
+// Stallion v4 uses FLAT structure - no nested package object
 interface ShipmentRequest {
     to_address: StallionAddress;
     return_address: StallionAddress;
-    package: StallionPackage;
-    postage_type: string; // e.g., "usps_ground_advantage", "ups_ground"
+    // Package fields (TOP LEVEL, not nested)
+    weight: number;
+    weight_unit: 'kg' | 'lb' | 'oz';
+    length?: number;
+    width?: number;
+    height?: number;
+    size_unit?: 'cm' | 'in';
+    // Shipping
+    postage_type: string;
+    // Customs
+    package_contents?: string;
+    value?: number;
+    currency?: string;
+    hs_code?: string;
+    country_of_origin?: string;
+    customs_description?: string;
+    // Reference
     reference?: string;
     description?: string;
 }
@@ -38,7 +47,20 @@ interface ShipmentRequest {
 interface RateRequest {
     to_address: StallionAddress;
     return_address: StallionAddress;
-    package: StallionPackage;
+    // Package fields (TOP LEVEL)
+    weight: number;
+    weight_unit: 'kg' | 'lb' | 'oz';
+    length?: number;
+    width?: number;
+    height?: number;
+    size_unit?: 'cm' | 'in';
+    // Customs
+    package_contents?: string;
+    value?: number;
+    currency?: string;
+    hs_code?: string;
+    country_of_origin?: string;
+    customs_description?: string;
 }
 
 interface StallionRate {
@@ -139,7 +161,6 @@ export async function voidShipment(shipCode: string): Promise<{ success: boolean
 // Export types for use in other files
 export type {
     StallionAddress,
-    StallionPackage,
     ShipmentRequest,
     RateRequest,
     StallionRate,
@@ -152,7 +173,7 @@ export type {
 export const DEFAULT_RETURN_ADDRESS: StallionAddress = {
     name: 'emfulfill',
     company: 'emfulfill',
-    street1: '123 Warehouse St', // TODO: Update with real address
+    address1: '123 Warehouse St', // TODO: Update with real address
     city: 'Toronto',
     province_code: 'ON',
     postal_code: 'M5V 1A1',
