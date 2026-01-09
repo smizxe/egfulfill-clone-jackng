@@ -89,6 +89,10 @@
   --text-main: #18181b;
   --text-muted: #71717a;
 
+  /* Card Variables */
+  --card-bg: #ffffff;
+  --card-border: #e4e4e7;
+
   /* Glass Panel Variables */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-surface: rgba(255, 255, 255, 0.4);
@@ -109,6 +113,10 @@
   /* Slate 900 / Deep Navy */
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+
+  /* Card Variables */
+  --card-bg: #18181b;
+  --card-border: #27272a;
 
   /* Glass Panel Variables */
   --glass-bg: rgba(15, 23, 42, 0.6);

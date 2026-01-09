@@ -19,147 +19,277 @@ interface TicketMessage {
     createdAt: string;
 }
 
-// ... inside component
-
-const [attachments, setAttachments] = useState<string[]>([]);
-// ...
-
-const handleSendMessage = async () => {
-    if (!newMessage.trim() && attachments.length === 0) return;
-    setSending(true);
-    try {
-        const res = await fetch(`/api/tickets/${ticketId}/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: newMessage,
-                senderRole: 'ADMIN',
-                attachments: attachments // Send as array
-            })
-        });
-
-        if (res.ok) {
-            setNewMessage('');
-            setAttachments([]);
-            fetchData();
-        } else {
-            message.error('Failed to send message');
-        }
-    } catch (error) {
-        message.error('Error sending message');
-    } finally {
-        setSending(false);
-    }
-};
-
-const handleImageUpload = async (options: any) => {
-    const { file, onSuccess, onError } = options;
-    const formData = new FormData();
-    formData.append('file', file);
-    setUploading(true);
-
-    try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
-        if (res.ok) {
-            const data = await res.json();
-            setAttachments(prev => [...prev, data.url]);
-            onSuccess("Ok");
-        } else {
-            onError("Upload failed");
-        }
-    } catch (err) {
-        onError("Upload error");
-    } finally {
-        setUploading(false);
-    }
-};
-
-// ... render loop
-<div className="whitespace-pre-wrap">{msg.message}</div>
-{/* Legacy single image */ }
-{
-    msg.imageUrl && (
-        <Image
-            src={msg.imageUrl}
-            alt="attachment"
-            className="mt-2 rounded-lg max-h-48 object-cover"
-            width={200}
-        />
-    )
+interface Ticket {
+    id: string;
+    subject: string;
+    status: string;
+    user: { email: string };
+    order?: { orderCode: string };
 }
-{/* New multiple attachments */ }
-{
-    msg.attachments && msg.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
-            {msg.attachments.map(att => (
-                <Image
-                    key={att.id}
-                    src={att.url}
-                    alt="attachment"
-                    className="rounded-lg object-cover"
-                    width={150}
-                    height={100}
-                />
-            ))}
-        </div>
-    )
-}
-<div className={`text-xs mt-1 ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
-    {new Date(msg.createdAt).toLocaleString()}
-</div>
 
-// ... render input area
-{/* Input Area */ }
-<div className="glass-panel rounded-2xl p-4 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800">
-    {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-            {attachments.map((url, idx) => (
-                <div key={idx} className="relative inline-block">
-                    <Image src={url} height={60} width={60} className="rounded object-cover" />
-                    <Button
-                        className="absolute -top-2 -right-2"
-                        size="small"
-                        shape="circle"
-                        danger
-                        icon={<CloseCircleOutlined />}
-                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+export default function AdminTicketDetailPage() {
+    const params = useParams();
+    const router = useRouter();
+    const ticketId = params.id as string;
+
+    const [ticket, setTicket] = useState<Ticket | null>(null);
+    const [messages, setMessages] = useState<TicketMessage[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const [newMessage, setNewMessage] = useState('');
+    const [attachments, setAttachments] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
+
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const fetchData = async () => {
+        try {
+            // Fetch ticket details (using list endpoint as fallback for now if single endpoint doesn't exist)
+            // Or better, assume we can fetch messages and ticket if endpoint was refactored.
+            // For now, mirroring previous logic: fetch list to find ticket, then messages.
+
+            const listRes = await fetch('/api/admin/tickets?status=ALL');
+            if (listRes.ok) {
+                const listData: Ticket[] = await listRes.json();
+                const found = listData.find(t => t.id === ticketId);
+                if (found) setTicket(found);
+            }
+
+            const msgRes = await fetch(`/api/tickets/${ticketId}/messages`);
+            if (msgRes.ok) {
+                const msgData = await msgRes.json();
+                setMessages(msgData);
+            }
+
+        } catch (error) {
+            console.error('Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 10000);
+        return () => clearInterval(interval);
+    }, [ticketId]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleSendMessage = async () => {
+        if (!newMessage.trim() && attachments.length === 0) return;
+        setSending(true);
+        try {
+            const res = await fetch(`/api/tickets/${ticketId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: newMessage,
+                    senderRole: 'ADMIN',
+                    attachments: attachments
+                })
+            });
+
+            if (res.ok) {
+                setNewMessage('');
+                setAttachments([]);
+                fetchData();
+            } else {
+                message.error('Failed to send message');
+            }
+        } catch (error) {
+            message.error('Error sending message');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const updateStatus = async (newStatus: string) => {
+        try {
+            const res = await fetch('/api/admin/tickets/resolve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticketId,
+                    resolution: newStatus,
+                    adminReply: 'Status updated'
+                })
+            });
+            if (res.ok) {
+                message.success(`Status updated to ${newStatus}`);
+                fetchData();
+            }
+        } catch (error) {
+            message.error('Failed to update status');
+        }
+    };
+
+    const handleImageUpload = async (options: any) => {
+        const { file, onSuccess, onError } = options;
+        const formData = new FormData();
+        formData.append('file', file);
+        setUploading(true);
+
+        try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            if (res.ok) {
+                const data = await res.json();
+                setAttachments(prev => [...prev, data.url]);
+                onSuccess("Ok");
+            } else {
+                onError("Upload failed");
+            }
+        } catch (err) {
+            onError("Upload error");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    if (loading && !ticket) return <div className="p-8"><Spin size="large" /></div>;
+
+    return (
+        <Content className="p-6 h-[calc(100vh-64px)] flex flex-col">
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm">
+                <Space>
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => router.push('/admin/tickets')} />
+                    <div>
+                        <h2 className="text-xl font-bold m-0">{ticket?.subject || 'Ticket Details'}</h2>
+                        <div className="text-gray-500 text-sm flex gap-2">
+                            <span>User: {ticket?.user?.email}</span>
+                            {ticket?.order?.orderCode && <span>| Order: {ticket.order.orderCode}</span>}
+                        </div>
+                    </div>
+                </Space>
+                <Space>
+                    <Select
+                        value={ticket?.status}
+                        onChange={updateStatus}
+                        style={{ width: 120 }}
+                        className={ticket?.status === 'RESOLVED' ? 'text-green-600' : ''}
+                    >
+                        <Option value="PENDING">Pending</Option>
+                        <Option value="RESOLVED">Resolved</Option>
+                        <Option value="REJECTED">Rejected</Option>
+                    </Select>
+                </Space>
+            </div>
+
+            {/* Chat Area */}
+            <div className="flex-1 glass-panel rounded-2xl p-4 overflow-y-auto mb-4 bg-white/50 dark:bg-black/20 flex flex-col gap-4">
+                {messages.length === 0 ? (
+                    <div className="text-center text-gray-400 mt-10">No messages yet.</div>
+                ) : (
+                    messages.map((msg) => {
+                        const isMe = msg.senderRole === 'ADMIN';
+                        return (
+                            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`flex max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
+                                    <Avatar
+                                        icon={isMe ? <CustomerServiceOutlined /> : <UserOutlined />}
+                                        className={isMe ? 'bg-purple-600' : 'bg-blue-500'}
+                                    />
+                                    <div className={`
+                                        p-3 rounded-2xl 
+                                        ${isMe
+                                            ? 'bg-purple-600 text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-tl-none'}
+                                    `}>
+                                        <div className="whitespace-pre-wrap">{msg.message}</div>
+                                        {/* Legacy single image */}
+                                        {msg.imageUrl && (
+                                            <Image
+                                                src={msg.imageUrl}
+                                                alt="attachment"
+                                                className="mt-2 rounded-lg max-h-48 object-cover"
+                                                width={200}
+                                            />
+                                        )}
+                                        {/* New multiple attachments */}
+                                        {msg.attachments && msg.attachments.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {msg.attachments.map(att => (
+                                                    <Image
+                                                        key={att.id}
+                                                        src={att.url}
+                                                        alt="attachment"
+                                                        className="rounded-lg object-cover"
+                                                        width={150}
+                                                        height={100}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className={`text-xs mt-1 ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
+                                            {new Date(msg.createdAt).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="glass-panel rounded-2xl p-4 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800">
+                {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {attachments.map((url, idx) => (
+                            <div key={idx} className="relative inline-block">
+                                <Image src={url} height={60} width={60} className="rounded object-cover" />
+                                <Button
+                                    className="absolute -top-2 -right-2"
+                                    size="small"
+                                    shape="circle"
+                                    danger
+                                    icon={<CloseCircleOutlined />}
+                                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="flex gap-2">
+                    <Upload
+                        customRequest={handleImageUpload}
+                        showUploadList={false}
+                        accept="image/*"
+                        multiple
+                    >
+                        <Button icon={uploading ? <LoadingOutlined /> : <PaperClipOutlined />} />
+                    </Upload>
+                    <TextArea
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a reply..."
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        onPressEnter={(e) => {
+                            if (!e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                            }
+                        }}
                     />
+                    <Button
+                        type="primary"
+                        icon={<SendOutlined />}
+                        loading={sending}
+                        onClick={handleSendMessage}
+                        className="bg-purple-600 hover:bg-purple-500"
+                    >
+                        Send
+                    </Button>
                 </div>
-            ))}
-        </div>
-    )}
-    <div className="flex gap-2">
-        <Upload
-            customRequest={handleImageUpload}
-            showUploadList={false}
-            accept="image/*"
-            multiple
-        >
-            <Button icon={uploading ? <LoadingOutlined /> : <PaperClipOutlined />} />
-        </Upload>
-        <TextArea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a reply..."
-            autoSize={{ minRows: 1, maxRows: 4 }}
-            onPressEnter={(e) => {
-                if (!e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                }
-            }}
-        />
-        <Button
-            type="primary"
-            icon={<SendOutlined />}
-            loading={sending}
-            onClick={handleSendMessage}
-            className="bg-purple-600 hover:bg-purple-500"
-        >
-            Send
-        </Button>
-    </div>
-</div>
-        </Content >
+            </div>
+        </Content>
     );
 }
