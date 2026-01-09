@@ -3,6 +3,8 @@ import React from 'react';
 import { Row, Col } from 'antd';
 import { UserOutlined, ShoppingOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminOverviewPage() {
     // Quick Stats
     const sellersCount = await prisma.seller.count();

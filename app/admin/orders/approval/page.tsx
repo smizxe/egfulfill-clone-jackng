@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import ApprovalClient from './ApprovalClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ApprovalPage() {
     const pendingOrders = await prisma.order.findMany({
         where: { status: 'PENDING_APPROVAL' },

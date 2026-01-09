@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, message, Space } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -38,6 +38,10 @@ export default function ApprovalClient({ orders: initialOrders }: { orders: any[
     const router = useRouter();
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setOrders(initialOrders);
+    }, [initialOrders]);
 
     const handleAction = (orderId: string, action: 'APPROVE' | 'REJECT') => {
         Modal.confirm({
