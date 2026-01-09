@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button, Tooltip } from 'antd';
+import { Layout, Menu, Button, Tooltip } from 'antd';
 import {
     DashboardOutlined,
     ShoppingOutlined,
@@ -16,7 +16,7 @@ import {
     TruckOutlined,
     ShopOutlined,
 } from '@ant-design/icons';
-import { Package } from 'lucide-react';
+import { Package, Ticket } from 'lucide-react';
 import { useTheme } from '@/components/Providers/ThemeContext';
 
 interface AdminSidebarProps {
@@ -36,7 +36,7 @@ export default function AdminSidebar({ collapsed, onCollapse }: AdminSidebarProp
         { key: '/admin/inventory', icon: <ShopOutlined />, label: 'Inventory' },
         { key: '/admin/users', icon: <TeamOutlined />, label: 'Users' },
         { key: '/admin/wallet', icon: <WalletOutlined />, label: 'Wallet' },
-        // { key: '/admin/tickets', icon: <CustomerServiceOutlined />, label: 'Tickets' }, // Not implemented
+        { key: '/admin/tickets', icon: <Ticket size={18} />, label: 'Tickets' },
         { key: '/admin/production', icon: <PrinterOutlined />, label: 'Production Release' },
         { key: '/admin/shipping', icon: <TruckOutlined />, label: 'Shipping' },
         { key: '/admin/staff', icon: <UserOutlined />, label: 'Staff' },

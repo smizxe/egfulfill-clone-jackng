@@ -79,14 +79,30 @@ const columns: ColumnsType<OrderType> = [
     },
 ];
 
+import { EyeOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+import { useState } from 'react';
+import OrderDetailsModal from './OrderDetailsModal';
+
 export default function OrdersTable({ orders }: { orders: any[] }) {
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+
+    const handleViewDetails = (order: any) => {
+        setSelectedOrder(order);
+        setModalVisible(true);
+    };
+
     const columns: ColumnsType<OrderType> = [
         {
             title: 'ORDER ID',
             dataIndex: 'orderCode',
             key: 'orderCode',
-            render: (text) => (
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-sky-500 transition-colors cursor-pointer">
+            render: (text, record) => (
+                <span
+                    className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-sky-500 transition-colors cursor-pointer"
+                    onClick={() => handleViewDetails(record)}
+                >
                     {text}
                 </span>
             ),
@@ -161,6 +177,20 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
                 </span>
             ),
         },
+        {
+            title: 'ACTION',
+            key: 'action',
+            render: (_, record) => (
+                <Tooltip title="View Details">
+                    <Button
+                        type="text"
+                        icon={<EyeOutlined />}
+                        className="text-zinc-500 hover:text-sky-500"
+                        onClick={() => handleViewDetails(record)}
+                    />
+                </Tooltip>
+            )
+        }
     ];
 
     return (
@@ -172,6 +202,12 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
                 pagination={{ pageSize: 10 }}
                 className="glass-table"
                 scroll={{ x: true }}
+            />
+
+            <OrderDetailsModal
+                visible={modalVisible}
+                onCancel={() => setModalVisible(false)}
+                order={selectedOrder}
             />
         </div>
     );

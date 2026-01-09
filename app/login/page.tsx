@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Form, Input, Button, Checkbox, message } from 'antd';
+import { Form, Input, Button, Checkbox, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const { message } = App.useApp();
 
     const onFinish = async (values: any) => {
         setLoading(true);

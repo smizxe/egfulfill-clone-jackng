@@ -4,6 +4,7 @@ import "./globals.css";
 import AntdRegistry from "@/lib/AntdRegistry";
 import { ThemeProvider } from "@/components/Providers/ThemeContext";
 import { UserProvider } from "@/components/Providers/UserContext";
+import { App } from 'antd';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,7 +30,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <UserProvider>
-            <AntdRegistry>{children}</AntdRegistry>
+            <AntdRegistry>
+              <App>
+                {children}
+              </App>
+            </AntdRegistry>
           </UserProvider>
         </ThemeProvider>
       </body>

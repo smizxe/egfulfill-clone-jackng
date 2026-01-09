@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import React from 'react';
 import { Row, Col } from 'antd';
 import { UserOutlined, ShoppingOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons';
+import Link from 'next/link';
+import MonthlyChart from './MonthlyChart';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,10 +20,10 @@ export default async function AdminOverviewPage() {
     const totalBalance = walletAgg._sum.balance || 0;
 
     const stats = [
-        { title: 'Total Sellers', value: sellersCount, icon: <TeamOutlined />, color: '#10b981' },
-        { title: 'Total Products', value: productsCount, icon: <ShoppingOutlined />, color: '#3b82f6' },
-        { title: 'Total Orders', value: ordersCount, icon: <UserOutlined />, color: '#8b5cf6' },
-        { title: 'Held Balance', value: totalBalance, icon: <DollarOutlined />, color: '#f43f5e', prefix: '$' },
+        { title: 'Total Sellers', value: sellersCount, icon: <TeamOutlined />, color: '#10b981', link: '/admin/users' },
+        { title: 'Total Products', value: productsCount, icon: <ShoppingOutlined />, color: '#3b82f6', link: '/admin/products' },
+        { title: 'Total Orders', value: ordersCount, icon: <UserOutlined />, color: '#8b5cf6', link: '/admin/orders?status=PENDING' },
+        { title: 'Held Balance', value: totalBalance, icon: <DollarOutlined />, color: '#f43f5e', prefix: '$', link: '/admin/wallet' },
     ];
 
     return (
@@ -35,34 +37,36 @@ export default async function AdminOverviewPage() {
             <Row gutter={[24, 24]}>
                 {stats.map((stat, index) => (
                     <Col xs={24} sm={12} md={6} key={index}>
-                        <div className="glass-card rounded-2xl p-6 h-full flex flex-col justify-between group">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">
-                                        {stat.title}
-                                    </p>
-                                    <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                                        {stat.prefix}{stat.value.toLocaleString()}
-                                    </h3>
-                                </div>
-                                <div
-                                    className="p-3 rounded-xl bg-opacity-10 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
-                                    style={{ backgroundColor: `${stat.color}20`, color: stat.color }}
-                                >
-                                    {stat.icon}
+                        <Link href={stat.link} className="block h-full">
+                            <div className="glass-card rounded-2xl p-6 h-full flex flex-col justify-between group hover:shadow-lg transition-all duration-300 cursor-pointer">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">
+                                            {stat.title}
+                                        </p>
+                                        <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                                            {stat.prefix}{stat.value.toLocaleString()}
+                                        </h3>
+                                    </div>
+                                    <div
+                                        className="p-3 rounded-xl bg-opacity-10 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
+                                        style={{ backgroundColor: `${stat.color}20`, color: stat.color }}
+                                    >
+                                        {stat.icon}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
                     </Col>
                 ))}
             </Row>
 
             <div className="mt-8">
-                <div className="glass-panel rounded-2xl p-8">
-                    <h3 className="text-xl font-bold mb-2 text-zinc-900 dark:text-zinc-100">System Status</h3>
-                    <p className="text-zinc-500 dark:text-zinc-400">Select a section from the sidebar to manage the platform.</p>
-                </div>
+                <MonthlyChart />
             </div>
+
+
         </div>
     );
 }
+

@@ -13,7 +13,7 @@ import {
     MenuUnfoldOutlined,
     RightOutlined
 } from '@ant-design/icons';
-import { Package } from 'lucide-react';
+import { Package, Ticket } from 'lucide-react';
 import { useTheme } from '@/components/Providers/ThemeContext';
 
 interface SidebarProps {
@@ -32,7 +32,7 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         { key: '/dashboard/orders', icon: <Package size={18} />, label: 'Orders' },
         { key: '/dashboard/wallet', icon: <CreditCardOutlined />, label: 'Billing' },
         { key: '/dashboard/orders/import', icon: <CloudUploadOutlined />, label: 'Import Orders' },
-        { key: '/dashboard/tickets', icon: <CustomerServiceOutlined />, label: 'Tickets' },
+        { key: '/dashboard/tickets', icon: <Ticket size={18} />, label: 'Tickets' },
     ];
 
     return (

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Table, Button, notification, Space } from 'antd';
-import { ReloadOutlined, PrinterOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ReloadOutlined, PrinterOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import OrderDetailsModal from '@/app/dashboard/orders/OrderDetailsModal';
 
 interface Job {
     id: string;
@@ -11,17 +12,22 @@ interface Job {
     sku: string;
     color: string | null;
     size: string | null;
-    quantity: number; // Corrected from qty based on schema: schema says qty Int @default(1)
-    qty: number; // schema field is `qty`
+    quantity: number;
+    qty: number;
     assignedStaff?: { email: string };
     createdAt: string;
     recipientName: string;
+    orderId?: string;
 }
 
 export default function ProductionPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+    // Modal State
+    const [viewOrderModalVisible, setViewOrderModalVisible] = useState(false);
+    const [currentOrder, setCurrentOrder] = useState<any>(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -32,7 +38,7 @@ export default function ProductionPage() {
             const data = await res.json();
             setJobs(data);
         } catch (error) {
-            notification.error({ title: 'Error loading production jobs' });
+            notification.error({ message: 'Error loading production jobs' });
         } finally {
             setLoading(false);
         }
@@ -49,6 +55,25 @@ export default function ProductionPage() {
         }
         const ids = selectedRowKeys.join(',');
         window.open(`/admin/print/labels?ids=${ids}`, '_blank');
+    };
+
+    const handleViewOrder = async (orderId: string) => {
+        if (!orderId) {
+            notification.warning({ message: 'Order ID missing for this job' });
+            return;
+        }
+        try {
+            const res = await fetch(`/api/admin/orders/${orderId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentOrder(data);
+                setViewOrderModalVisible(true);
+            } else {
+                notification.error({ message: 'Failed to load order details' });
+            }
+        } catch (error) {
+            notification.error({ message: 'Error loading order details' });
+        }
     };
 
     const columns = [
@@ -110,10 +135,17 @@ export default function ProductionPage() {
             },
         },
         {
-            title: 'Created At',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            render: (d: string) => new Date(d).toLocaleString(),
+            title: 'Action',
+            key: 'action',
+            render: (_: any, r: Job) => (
+                <Button
+                    type="text"
+                    icon={<EyeOutlined />}
+                    onClick={() => handleViewOrder(r.orderId || '')}
+                >
+                    View Order
+                </Button>
+            )
         }
     ];
 
@@ -165,6 +197,13 @@ export default function ProductionPage() {
                     className="glass-table"
                 />
             </div>
+
+            <OrderDetailsModal
+                visible={viewOrderModalVisible}
+                onCancel={() => setViewOrderModalVisible(false)}
+                order={currentOrder}
+                showReportButton={false}
+            />
         </div>
     );
 }
