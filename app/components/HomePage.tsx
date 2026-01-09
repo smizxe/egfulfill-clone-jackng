@@ -50,11 +50,11 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
             const nav = document.getElementById('navbar');
             if (nav) {
                 if (window.scrollY > 10) {
-                    nav.classList.add('shadow-sm');
-                    nav.classList.add('bg-[var(--card-bg)]/80');
+                    nav.classList.add('shadow-md');
+                    nav.classList.add('!bg-[var(--bg-body)]');
                 } else {
-                    nav.classList.remove('shadow-sm');
-                    nav.classList.remove('bg-[var(--card-bg)]/80');
+                    nav.classList.remove('shadow-md');
+                    nav.classList.remove('!bg-[var(--bg-body)]');
                 }
             }
         };
@@ -143,7 +143,7 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
             </div>
 
             {/* Navbar */}
-            <nav className="fixed top-0 w-full z-40 border-b border-white/10 glass-panel transition-all duration-300" id="navbar">
+            <nav className="fixed top-0 w-full z-[100] border-b border-white/10 glass-panel transition-all duration-300" id="navbar">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2 cursor-pointer group">
