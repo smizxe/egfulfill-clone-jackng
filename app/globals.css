@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* Re-syncing styles with generated-page.html */
 
 /* FORCE CLASS-BASED DARK MODE */
 @variant dark (&:where(.dark, .dark *));
