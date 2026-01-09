@@ -164,14 +164,14 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
                     {/* CTAs */}
                     <div className="hidden md:flex items-center gap-4">
                         {isLoggedIn ? (
-                            <a href="/dashboard" className="bg-[var(--text-main)] text-[var(--bg-body)] px-6 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                            <a href="/dashboard" className="btn-invert px-6 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
                                 <Home className="w-4 h-4" />
                                 Go to Dashboard
                             </a>
                         ) : (
                             <>
                                 <a href="/login" className="text-sm font-medium text-[var(--text-main)] hover:text-brand-600 transition-colors">Login</a>
-                                <a href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                                <a href="/register" className="btn-invert px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-brand-500/20 flex items-center gap-2">
                                     <UserPlus className="w-4 h-4" />
                                     Register
                                 </a>
@@ -239,13 +239,13 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
 
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 {isLoggedIn ? (
-                                    <a href="/dashboard" className="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
+                                    <a href="/dashboard" className="btn-invert px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
                                         <Home className="w-4 h-4" />
                                         Go to Dashboard
                                     </a>
                                 ) : (
                                     <>
-                                        <a href="/register" className="bg-[var(--text-main)] text-[var(--bg-body)] px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
+                                        <a href="/register" className="btn-invert px-8 py-3.5 rounded-full text-sm font-medium hover:opacity-90 transition-all shadow-xl shadow-brand-500/20 flex items-center justify-center gap-2">
                                             Register
                                             <UserPlus className="w-4 h-4" />
                                         </a>
@@ -663,12 +663,12 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
                             <p className="text-lg opacity-80 mb-10 max-w-xl mx-auto">Join the new standard in dropshipping and POD logistics today.</p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 {isLoggedIn ? (
-                                    <a href="/dashboard" className="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                    <a href="/dashboard" className="px-8 py-3.5 rounded-full bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
                                         <Home className="w-4 h-4" />
                                         Go to Dashboard
                                     </a>
                                 ) : (
-                                    <a href="/register" className="px-8 py-3.5 rounded-full bg-[var(--bg-body)] text-[var(--text-main)] font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                    <a href="/register" className="px-8 py-3.5 rounded-full bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white font-semibold text-sm hover:scale-105 transition-transform flex items-center justify-center gap-2">
                                         Register
                                         <UserPlus className="w-4 h-4" />
                                     </a>
