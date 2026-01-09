@@ -557,55 +557,166 @@ export default function HomePage({ isLoggedIn }: HomePageProps) {
                 </section>
 
                 {/* Workflow Timeline */}
-                <section id="workflow" className="py-24 bg-zinc-50 dark:bg-zinc-900/30 border-y border-[var(--card-border)]">
+                <section id="workflow" className="py-24 bg-zinc-50 dark:bg-zinc-900/30 border-y border-[var(--card-border)] overflow-hidden">
                     <div className="max-w-6xl mx-auto px-6">
-                        <div className="text-center mb-16 reveal">
+                        <div className="text-center mb-20 reveal">
                             <h2 className="text-3xl font-semibold text-[var(--text-main)] mb-4">A simple, scalable workflow</h2>
-                            <p className="text-[var(--text-muted)]">From dashboard to doorstep in 6 automated steps.</p>
+                            <p className="text-[var(--text-muted)]">From dashboard to doorstep in 4 simple steps.</p>
                         </div>
 
                         <div className="relative">
-                            <div className="hidden lg:block absolute top-1/2 left-0 w-full h-0.5 bg-[var(--card-border)] -translate-y-1/2 z-0"></div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 relative z-10">
-                                <div className="reveal relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-brand-500 text-brand-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform">1</div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">Wallet Top-up</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Secure prepaid funding.</p>
+                            {/* Desktop Line (Horizontal) */}
+                            <div className="hidden lg:block absolute top-6 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-800 -z-0">
+                                <div className="absolute top-0 left-0 h-full w-full bg-brand-500 origin-left animate-progress-horizontal"></div>
+                                {/* Arrow at the end */}
+                                <div className="absolute -right-1 top-1/2 -translate-y-1/2 text-brand-500 opacity-0 animate-arrow-show">
+                                    <ArrowRight className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            {/* Mobile Line (Vertical) - Centered */}
+                            <div className="lg:hidden absolute left-1/2 -translate-x-1/2 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-800 -z-0">
+                                <div className="absolute top-0 left-0 w-full h-full bg-brand-500 origin-top animate-progress-vertical"></div>
+                                {/* Arrow at the bottom */}
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-brand-500 opacity-0 animate-arrow-show">
+                                    <ArrowRight className="w-4 h-4 rotate-90" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-8 relative z-10">
+                                {/* Step 1 */}
+                                <div className="relative flex flex-col items-center text-center group">
+                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 animate-step-1">1</div>
+                                    <h4 className="font-semibold text-base text-[var(--text-main)]">Wallet Top-up</h4>
+                                    <p className="text-sm text-[var(--text-muted)] mt-1">Safe and secure.</p>
                                 </div>
 
-                                <div className="reveal delay-100 relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">2</div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">Import Orders</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Excel or API sync.</p>
+                                {/* Step 2 */}
+                                <div className="relative flex flex-col items-center text-center group">
+                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 animate-step-2">2</div>
+                                    <h4 className="font-semibold text-base text-[var(--text-main)]">Import Orders</h4>
+                                    <p className="text-sm text-[var(--text-muted)] mt-1">Excel or API sync.</p>
                                 </div>
 
-                                <div className="reveal delay-200 relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">3</div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">Processing</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">System creates jobs.</p>
+                                {/* Step 3 */}
+                                <div className="relative flex flex-col items-center text-center group">
+                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 animate-step-3">3</div>
+                                    <h4 className="font-semibold text-base text-[var(--text-main)]">We take care of it all</h4>
+                                    <p className="text-sm text-[var(--text-muted)] mt-1">Production & quality check.</p>
                                 </div>
 
-                                <div className="reveal delay-300 relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">4</div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">QR Printing</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Dual stickers generated.</p>
-                                </div>
-
-                                <div className="reveal delay-400 relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:border-brand-500 group-hover:text-brand-600 transition-colors">5</div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">Production</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Scan &amp; Create.</p>
-                                </div>
-
-                                <div className="reveal delay-500 relative flex flex-col items-center text-center group">
-                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-emerald-500 text-emerald-600 flex items-center justify-center font-bold mb-4 shadow-sm z-10 group-hover:scale-110 transition-transform"><Check className="w-5 h-5" /></div>
-                                    <h4 className="font-semibold text-sm text-[var(--text-main)]">Shipping</h4>
-                                    <p className="text-xs text-[var(--text-muted)] mt-2 px-2">Tracking sent instantly.</p>
+                                {/* Step 4 */}
+                                <div className="relative flex flex-col items-center text-center group">
+                                    <div className="w-12 h-12 rounded-full bg-[var(--bg-body)] border-2 border-[var(--card-border)] text-[var(--text-muted)] flex items-center justify-center font-bold mb-4 shadow-sm z-10 animate-step-4">
+                                        <Check className="w-6 h-6" />
+                                    </div>
+                                    <h4 className="font-semibold text-base text-[var(--text-main)]">Ship to your customer</h4>
+                                    <p className="text-sm text-[var(--text-muted)] mt-1">And enjoy the profit.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <style jsx>{`
+                        /* Base inactive state is set in className (gray borders/text) */
+                        
+                        /* 
+                           TOTAL CYCLE: 30s
+                           0% -> 40%: Extend (Line grows, steps light up)
+                           40% -> 60%: Hold (Line full, all active)
+                           60% -> 100%: Retract (Line shrinks, steps dim in reverse)
+                        */
+
+                        @keyframes cycle-progress-horizontal {
+                            0% { transform: scaleX(0); }
+                            40%, 60% { transform: scaleX(1); }
+                            100% { transform: scaleX(0); }
+                        }
+                        
+                        @keyframes cycle-progress-vertical {
+                            0% { transform: scaleY(0); }
+                            40%, 60% { transform: scaleY(1); }
+                            100% { transform: scaleY(0); }
+                        }
+
+                        @keyframes cycle-arrow-show {
+                            0%, 35% { opacity: 0; transform: translateY(-50%) scale(0.5); }
+                            40%, 60% { opacity: 1; transform: translateY(-50%) scale(1); }
+                            65%, 100% { opacity: 0; transform: translateY(-50%) scale(0.5); }
+                        }
+                        @keyframes cycle-arrow-show-mobile {
+                            0%, 35% { opacity: 0; transform: translateX(-50%) rotate(90deg) scale(0.5); }
+                            40%, 60% { opacity: 1; transform: translateX(-50%) rotate(90deg) scale(1); }
+                            65%, 100% { opacity: 0; transform: translateX(-50%) rotate(90deg) scale(0.5); }
+                        }
+
+                        /* 
+                           Step Timing Logic (30s duration):
+                           Extension (0-40%): Steps light up at ~0%, ~10%, ~20%, ~30%
+                           Retraction (60-100%): Steps dim at ~70%, ~80%, ~90%, ~100% (Reverse order)
+                           
+                           We define a generic 'active' state in the keyframes.
+                           Step 1: Active 0% -> 100% (Wait, it needs to turn off at end).
+                           Actually, better to define specific keyframes for "Active" vs "Inactive" time windows.
+                        */
+
+                        @keyframes cycle-step-brand {
+                            0% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                            5%, 95% { border-color: var(--brand-500); color: var(--brand-600); transform: scale(1.1); }
+                            100% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                        }
+                        
+                        /* We need different timings for each step to sync with the line passing them */
+                        
+                        /* Step 1: Line passes early (start) and leaves late (end) */
+                        @keyframes cycle-step-1 {
+                            0% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                            2%, 98% { border-color: var(--brand-500); color: var(--brand-600); transform: scale(1.1); } /* Active range */
+                            100% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                        }
+
+                        /* Step 2: Line passes at ~13%, leaves at ~87% */
+                        @keyframes cycle-step-2 {
+                            0%, 10% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                            13%, 87% { border-color: var(--brand-500); color: var(--brand-600); transform: scale(1.1); }
+                            90%, 100% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                        }
+
+                        /* Step 3: Line passes at ~26%, leaves at ~74% */
+                        @keyframes cycle-step-3 {
+                            0%, 23% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                            26%, 74% { border-color: var(--brand-500); color: var(--brand-600); transform: scale(1.1); }
+                            77%, 100% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                        }
+
+                        /* Step 4 Check: Line passes at ~39%, leaves at ~61% */
+                        @keyframes cycle-step-4 {
+                            0%, 36% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                            39%, 61% { border-color: #10b981; color: #059669; transform: scale(1.1); }
+                            64%, 100% { border-color: var(--card-border); color: var(--text-muted); transform: scale(1); }
+                        }
+
+                        /* Apply animations */
+                        :global(.active) .animate-progress-horizontal {
+                            animation: cycle-progress-horizontal 30s linear infinite;
+                        }
+                        :global(.active) .animate-progress-vertical {
+                            animation: cycle-progress-vertical 30s linear infinite;
+                        }
+                        
+                        :global(.active) .hidden.lg\:block .animate-arrow-show {
+                            animation: cycle-arrow-show 30s linear infinite;
+                        }
+                        :global(.active) .lg\:hidden .animate-arrow-show {
+                            animation: cycle-arrow-show-mobile 30s linear infinite;
+                        }
+
+                        :global(.active) .animate-step-1 { animation: cycle-step-1 30s linear infinite; }
+                        :global(.active) .animate-step-2 { animation: cycle-step-2 30s linear infinite; }
+                        :global(.active) .animate-step-3 { animation: cycle-step-3 30s linear infinite; }
+                        :global(.active) .animate-step-4 { animation: cycle-step-4 30s linear infinite; }
+                    `}</style>
                 </section>
 
                 {/* Integrations & Pricing Teaser */}

@@ -444,10 +444,11 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
 
             {/* Special Pricing Sections */}
             {currentColors.length > 0 && (
-                <div className="mt-4 p-3 bg-gray-50 rounded">
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded border border-transparent dark:border-zinc-700">
                     <Checkbox
                         checked={enableColorPricing}
                         onChange={(e) => setEnableColorPricing(e.target.checked)}
+                        className="dark:text-zinc-200"
                     >
                         <span className="font-medium">Special Pricing by Color</span>
                     </Checkbox>
@@ -464,10 +465,11 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
             )}
 
             {currentSizes.length > 0 && (
-                <div className="mt-4 p-3 bg-gray-50 rounded">
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded border border-transparent dark:border-zinc-700">
                     <Checkbox
                         checked={enableSizePricing}
                         onChange={(e) => setEnableSizePricing(e.target.checked)}
+                        className="dark:text-zinc-200"
                     >
                         <span className="font-medium">Special Pricing by Size</span>
                     </Checkbox>
@@ -485,7 +487,7 @@ export default function ProductModal({ open, onCancel, onSuccess, product }: Pro
 
             {/* Price Preview */}
             {(enableColorPricing || enableSizePricing) && (
-                <div className="mt-4 p-3 bg-blue-50 rounded text-sm">
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded text-sm dark:text-zinc-300 border border-blue-100 dark:border-blue-800/50">
                     <strong>Price Preview:</strong>
                     <ul className="mt-1 list-disc list-inside">
                         {(currentColors.length > 0 ? currentColors : [null]).slice(0, 2).map((color) =>
