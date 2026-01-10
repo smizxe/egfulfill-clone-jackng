@@ -88,7 +88,15 @@ export default function MonthlyChart({ onDateSelect, selectedDate, activeMetric,
 
     // Custom dot component (Visual only - renders on all data points)
     const CustomDot = (props: any) => {
-        const { cx, cy } = props;
+        const { cx, cy, payload } = props;
+
+        const handleClick = (e: any) => {
+            e.stopPropagation();
+            if (payload && payload.date) {
+                console.log('Dot clicked! Date:', payload.date);
+                if (onDateSelect) onDateSelect(payload.date);
+            }
+        };
 
         return (
             <circle
@@ -98,6 +106,34 @@ export default function MonthlyChart({ onDateSelect, selectedDate, activeMetric,
                 fill={currentConfig.color}
                 stroke="#fff"
                 strokeWidth={2}
+                style={{ cursor: 'pointer' }}
+                onClick={handleClick}
+            />
+        );
+    };
+
+    // Custom Active Dot component (Renders when hovering)
+    const CustomActiveDot = (props: any) => {
+        const { cx, cy, payload } = props;
+
+        const handleClick = (e: any) => {
+            e.stopPropagation();
+            if (payload && payload.date) {
+                console.log('Active Dot clicked! Date:', payload.date);
+                if (onDateSelect) onDateSelect(payload.date);
+            }
+        };
+
+        return (
+            <circle
+                cx={cx}
+                cy={cy}
+                r={8}
+                fill={currentConfig.color}
+                stroke="#fff"
+                strokeWidth={2}
+                style={{ cursor: 'pointer' }}
+                onClick={handleClick}
             />
         );
     };
@@ -224,7 +260,7 @@ export default function MonthlyChart({ onDateSelect, selectedDate, activeMetric,
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                                tickFormatter={(val) => activeMetric === 'Wallet' ? `$${val}` : val}
+                                tickFormatter={(val: any) => activeMetric === 'Wallet' ? `$${val}` : val}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -244,7 +280,7 @@ export default function MonthlyChart({ onDateSelect, selectedDate, activeMetric,
                                 fillOpacity={1}
                                 fill="url(#colorMetric)"
                                 dot={<CustomDot />}
-                                activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff', fill: currentConfig.color }}
+                                activeDot={<CustomActiveDot />}
                                 animationDuration={1000}
                             />
                         </AreaChart>
