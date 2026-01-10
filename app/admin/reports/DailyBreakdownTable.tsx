@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Table, Card, Tag, Modal, Tabs, List, Space, Typography, Spin, Empty } from 'antd';
+import { Table, Card, Tag, Modal, Tabs, List, Space, Typography, Spin, Empty, Button } from 'antd';
+import { Eye } from 'lucide-react';
 import dayjs from 'dayjs';
 import localeData from 'dayjs/plugin/localeData';
 import weekday from 'dayjs/plugin/weekday';
@@ -122,6 +123,19 @@ export default function DailyBreakdownTable({ month, year }: DailyBreakdownTable
                 </span>
             ),
         },
+        {
+            title: 'Action',
+            key: 'action',
+            width: 80,
+            align: 'center' as const,
+            render: (_: any, record: DailyStats) => (
+                <Button
+                    type="text"
+                    icon={<Eye size={18} className="text-zinc-500 hover:text-blue-600" />}
+                    onClick={() => fetchDailyDetails(record.date)}
+                />
+            )
+        }
     ];
 
     return (
@@ -131,16 +145,8 @@ export default function DailyBreakdownTable({ month, year }: DailyBreakdownTable
                 columns={columns}
                 rowKey="date"
                 loading={loading}
-                pagination={{ pageSize: 31, hideOnSinglePage: true }} // Show all days of month
+                pagination={{ pageSize: 10 }}
                 scroll={{ x: 600 }}
-                onRow={(record) => {
-                    return {
-                        onClick: () => {
-                            fetchDailyDetails(record.date);
-                        },
-                        style: { cursor: 'pointer' }
-                    };
-                }}
             />
 
             <Modal
