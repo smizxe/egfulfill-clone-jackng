@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Form, Input, Upload, Button, message } from 'antd';
+import { Modal, Form, Input, Upload, Button, message, Select } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 
@@ -40,14 +40,17 @@ export default function ReportTicketModal({ visible, onCancel, orderId, onSucces
             const { url } = await uploadRes.json();
 
             // 2. Create Ticket
+            // Combine Reason + Description for the message
+            const initialMessage = `[Reason: ${values.reason}]\n\n${values.description || ''}`;
+
             const ticketRes = await fetch('/api/tickets/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId,
-                    subject: values.subject,
-                    description: values.description,
-                    imageUrl: url
+                    subject: values.subject, // Now a Select value
+                    description: initialMessage,
+                    attachments: [url] // Send as array
                 })
             });
 
@@ -78,18 +81,37 @@ export default function ReportTicketModal({ visible, onCancel, orderId, onSucces
             <Form form={form} layout="vertical">
                 <Form.Item
                     name="subject"
-                    label="Subject"
-                    rules={[{ required: true, message: 'Please enter a subject' }]}
+                    label="Issue Type"
+                    rules={[{ required: true, message: 'Please select issue type' }]}
                 >
-                    <Input placeholder="e.g. Wrong item received, Damaged..." />
+                    <Select placeholder="Select Issue Type">
+                        <Select.Option value="Replacement Request">Replacement Request</Select.Option>
+                        <Select.Option value="Refund Request">Refund Request</Select.Option>
+                        <Select.Option value="Other Issue">Other Issue</Select.Option>
+                    </Select>
                 </Form.Item>
+
+                <Form.Item
+                    name="reason"
+                    label="Reason"
+                    rules={[{ required: true, message: 'Please select a reason' }]}
+                >
+                    <Select placeholder="Select Reason">
+                        <Select.Option value="Wrong Item Received">Wrong Item Received</Select.Option>
+                        <Select.Option value="Damaged Item">Damaged Item</Select.Option>
+                        <Select.Option value="Lost in Transit">Lost in Transit</Select.Option>
+                        <Select.Option value="Quality Issue">Quality Issue</Select.Option>
+                        <Select.Option value="Other">Other</Select.Option>
+                    </Select>
+                </Form.Item>
+
                 <Form.Item
                     name="description"
-                    label="Description"
-                    rules={[{ required: true, message: 'Please describe the issue' }]}
+                    label="Additional Details (Optional)"
                 >
-                    <Input.TextArea rows={4} placeholder="Describe the issue in detail..." />
+                    <Input.TextArea rows={3} placeholder="Provide any extra details here..." />
                 </Form.Item>
+
                 <Form.Item label="Evidence (Required)">
                     <Upload
                         listType="picture"

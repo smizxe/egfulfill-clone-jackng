@@ -1,42 +1,42 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Tag, Space, Modal, Input, message, Image, Radio } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, Modal, message, Popconfirm, Tabs, Image, Radio, Input } from 'antd';
+import { EyeOutlined, InfoCircleOutlined, WarningOutlined, ReloadOutlined, DollarCircleOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import OrderImportModal from './OrderImportModal';
 
 interface Ticket {
     id: string;
     subject: string;
     description: string;
-    imageUrl: string;
+    imageUrl?: string;
     status: string;
     createdAt: string;
     user: { email: string };
     order?: { orderCode: string };
+    orderId?: string;
 }
 
 export default function TicketManagement() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(false);
-    const [resolveModalVisible, setResolveModalVisible] = useState(false);
+    const [resolveModalVisible, setResolveModalVisible] = useState(false); // Kept for generic resolve if needed
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [adminReply, setAdminReply] = useState('');
-    const [actionType, setActionType] = useState<'RESOLVED' | 'REJECTED'>('RESOLVED');
     const [filterStatus, setFilterStatus] = useState<string>('PENDING');
+    const [activeTab, setActiveTab] = useState('SUPPORT'); // SUPPORT or ORDER_ISSUES
+
+    // Replacement Modal State
+    const [importModalVisible, setImportModalVisible] = useState(false);
+
+    const router = useRouter();
 
     const fetchTickets = async () => {
         setLoading(true);
         try {
-            // Fetch all tickets and filter locally or fetch based on status if API supports it
-            // Current API just returns PENDING, need to update API to support all or filter query
-            // Updating API to support status query param first might be better, or fetch all.
-            // For now, let's try to fetch all and filter client side or update API.
-            // Actually, the previous API implementation hardcoded "where: { status: 'PENDING' }".
-            // I should update the API to be flexible first.
             const res = await fetch(`/api/admin/tickets?status=${filterStatus}`);
             const data = await res.json();
-            // If API still returns object with error, handle it
             if (res.ok && Array.isArray(data)) {
                 setTickets(data);
             } else {
@@ -53,73 +53,129 @@ export default function TicketManagement() {
         fetchTickets();
     }, [filterStatus]);
 
-    const router = useRouter();
-
     const handleView = (ticket: Ticket) => {
         router.push(`/admin/tickets/${ticket.id}`);
     };
 
-    const handleAction = (ticket: Ticket, type: 'RESOLVED' | 'REJECTED') => {
-        setSelectedTicket(ticket);
-        setActionType(type);
-        setAdminReply('');
-        setResolveModalVisible(true);
-    };
-
-    const submitResolution = async () => {
-        if (!selectedTicket) return;
+    const handleResolve = async (ticketId: string, decision: 'APPROVE' | 'REJECT' | 'REFUND' | 'REPLACEMENT') => {
         try {
+            setLoading(true);
             const res = await fetch('/api/admin/tickets/resolve', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ticketId: selectedTicket.id,
-                    resolution: actionType,
-                    adminReply
-                })
+                body: JSON.stringify({ ticketId, decision })
             });
+            const data = await res.json();
 
             if (res.ok) {
-                message.success(`Ticket marked as ${actionType}`);
-                setResolveModalVisible(false);
-                // Refresh list - if we are in PENDING view, the resolved ticket should disappear
-                fetchTickets();
+                message.success(`Ticket ${decision.toLowerCase()} successful`);
+                setTickets(prev => prev.filter(t => t.id !== ticketId));
             } else {
-                message.error('Failed to update ticket');
+                message.error(data.error || 'Failed to resolve ticket');
             }
         } catch (error) {
-            message.error('Error submitting resolution');
+            console.error(error);
+            message.error('Error resolving ticket');
+        } finally {
+            setLoading(false);
         }
+    };
+
+    const handleReplacementClick = (ticket: Ticket) => {
+        setSelectedTicket(ticket);
+        setImportModalVisible(true);
+    };
+
+    const handleImportSuccess = () => {
+        setImportModalVisible(false);
+        if (selectedTicket) {
+            handleResolve(selectedTicket.id, 'REPLACEMENT');
+        }
+    };
+
+    // Helper to render Actions
+    const renderActions = (record: Ticket) => {
+        // Order Issue Logic
+        if (record.orderId) {
+            const subject = (record.subject || '').toLowerCase();
+            const isRefund = subject.includes('refund');
+            const isReplacement = subject.includes('replacement');
+
+            // If Refund Request
+            if (isRefund) {
+                return (
+                    <div className="flex gap-2">
+                        <Popconfirm
+                            title="Issue Refund?"
+                            description="This will refund the order value to the seller's wallet."
+                            onConfirm={() => handleResolve(record.id, 'REFUND')}
+                            okText="Refund"
+                            cancelText="Cancel"
+                            okButtonProps={{ loading: loading, danger: true }}
+                        >
+                            <Button type="primary" size="small" icon={<DollarCircleOutlined />} className="bg-green-600 hover:bg-green-500">
+                                Refund
+                            </Button>
+                        </Popconfirm>
+                        <Button danger size="small" onClick={() => handleResolve(record.id, 'REJECT')} loading={loading}>
+                            Reject
+                        </Button>
+                    </div>
+                );
+            }
+
+            // If Replacement Request
+            if (isReplacement) {
+                return (
+                    <div className="flex gap-2">
+                        <Button
+                            type="primary"
+                            size="small"
+                            icon={<ReloadOutlined />}
+                            className="bg-blue-600 hover:bg-blue-500"
+                            onClick={() => handleReplacementClick(record)}
+                        >
+                            Replacement
+                        </Button>
+                        <Button danger size="small" onClick={() => handleResolve(record.id, 'REJECT')} loading={loading}>
+                            Reject
+                        </Button>
+                    </div>
+                );
+            }
+        }
+
+        // Generic / Support Ticket Actions
+        return (
+            <div className="flex gap-2">
+                <Button size="small" onClick={() => handleView(record)} icon={<EyeOutlined />}>
+                    View
+                </Button>
+                {record.status === 'PENDING' && (
+                    <Button type="primary" size="small" onClick={() => handleResolve(record.id, 'APPROVE')}>
+                        Resolve
+                    </Button>
+                )}
+            </div>
+        );
     };
 
     const columns = [
         {
-            title: 'Date',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            render: (d: string) => new Date(d).toLocaleDateString()
+            title: 'Subject',
+            dataIndex: 'subject',
+            key: 'subject',
+            render: (text: string) => <span className="font-medium">{text}</span>
         },
         {
             title: 'User',
             dataIndex: ['user', 'email'],
-            key: 'user'
+            key: 'user',
         },
         {
-            title: 'Order',
-            dataIndex: ['order', 'orderCode'],
+            title: 'Order Code',
             key: 'order',
-            render: (text: string) => text || 'N/A'
-        },
-        {
-            title: 'Subject',
-            dataIndex: 'subject',
-            key: 'subject',
-            render: (text: string, record: Ticket) => (
-                <div className="cursor-pointer hover:text-blue-500" onClick={() => handleView(record)}>
-                    <div className="font-bold">{text}</div>
-                    <div className="text-gray-500 text-xs truncate max-w-xs">{record.description}</div>
-                </div>
-            )
+            render: (_: any, record: Ticket) => record.order?.orderCode ? <Tag color="blue">{record.order.orderCode}</Tag> : '-'
         },
         {
             title: 'Evidence',
@@ -143,20 +199,14 @@ export default function TicketManagement() {
         {
             title: 'Actions',
             key: 'action',
-            render: (_: any, record: Ticket) => (
-                <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => handleView(record)}
-                >
-                    View Chat
-                </Button>
-            )
+            render: (_: any, record: Ticket) => renderActions(record)
         }
     ];
 
     return (
-        <div>
+        <div className="p-6">
+            <h1 className="text-2xl font-bold mb-6">Ticket Management</h1>
+
             <div className="mb-4 flex flex-col md:flex-row justify-between items-center bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm">
                 <span className="font-semibold text-gray-600 dark:text-gray-300 mb-2 md:mb-0">Filter Tickets:</span>
                 <Radio.Group
@@ -171,36 +221,55 @@ export default function TicketManagement() {
                 </Radio.Group>
             </div>
 
-            <Table
-                dataSource={tickets}
-                columns={columns}
-                rowKey="id"
-                loading={loading}
-                className="glass-table"
-                onRow={(record) => ({
-                    onClick: () => handleView(record), // Click row to view
-                    style: { cursor: 'pointer' }
-                })}
-            />
+            {/* Tabs for Support vs Order Issues */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm overflow-hidden">
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    className="px-4 pt-2"
+                    items={[
+                        {
+                            key: 'SUPPORT',
+                            label: 'Support Requests (General)',
+                            icon: <InfoCircleOutlined />,
+                            children: (
+                                <Table
+                                    dataSource={tickets.filter(t => !t.orderId)}
+                                    columns={columns.filter(c => c.key !== 'order')} // Hide Order column for general support
+                                    rowKey="id"
+                                    loading={loading}
 
-            <Modal
-                title={`${actionType === 'RESOLVED' ? 'Resolve' : 'Reject'} Ticket`}
-                open={resolveModalVisible}
-                onOk={submitResolution}
-                onCancel={() => setResolveModalVisible(false)}
-            >
-                <p>User: {selectedTicket?.user.email}</p>
-                <p>Subject: {selectedTicket?.subject}</p>
-                <div className="mt-4">
-                    <label className="block mb-2">Admin Note/Reply:</label>
-                    <Input.TextArea
-                        rows={4}
-                        value={adminReply}
-                        onChange={(e) => setAdminReply(e.target.value)}
-                        placeholder="Enter explanation or reply to user..."
-                    />
-                </div>
-            </Modal>
+                                />
+                            )
+                        },
+                        {
+                            key: 'ORDER_ISSUES',
+                            label: 'Order Issues / Reports',
+                            icon: <WarningOutlined />,
+                            children: (
+                                <Table
+                                    dataSource={tickets.filter(t => t.orderId)}
+                                    columns={columns} // Show all columns including Order Code
+                                    rowKey="id"
+                                    loading={loading}
+                                />
+                            )
+                        }
+                    ]}
+                />
+            </div>
+
+            {/* Replacement Import Modal */}
+            {selectedTicket && (
+                <OrderImportModal
+                    visible={importModalVisible}
+                    onCancel={() => setImportModalVisible(false)}
+                    onSuccess={handleImportSuccess}
+                    mode="REPLACEMENT"
+                    sellerId={selectedTicket.user?.email} // using email as ID/identifier for now
+                />
+            )}
         </div>
     );
 }
+

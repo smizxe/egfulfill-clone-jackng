@@ -11,6 +11,7 @@ datasource db {
 model User {
   id                 String              @id @default(uuid())
   email              String              @unique
+  name               String?
   passwordHash       String
   role               String              @default("SELLER")
   sellerId           String?
@@ -184,6 +185,7 @@ model Order {
   seller          Seller     @relation(fields: [sellerId], references: [id])
   shipments       Shipment[]
   Ticket          Ticket[]
+  rejectionReason String?
 }
 
 model Job {
@@ -267,6 +269,7 @@ model Ticket {
   description String? // Initial description, kept for reference
   imageUrl    String?
   status      String   @default("PENDING") // PENDING, RESOLVED, REJECTED
+  resolutionType String? // REFUND, REPLACEMENT, REJECT, NONE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

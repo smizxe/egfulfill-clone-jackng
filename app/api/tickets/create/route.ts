@@ -12,16 +12,12 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { orderId, subject, description, // imageUrl (legacy)
-            attachments } = body; // attachments: string[]
-
-        // Validation: require description or attachments?
-        // if (!description && (!attachments || attachments.length === 0)) { ... }
+        const { orderId, subject, description, attachments } = body;
 
         const ticket = await prisma.ticket.create({
             data: {
                 userId,
-                orderId,
+                orderId: orderId || null, // Handle explicit null or undefined
                 subject,
                 description,
                 status: 'PENDING',
@@ -31,10 +27,10 @@ export async function POST(req: NextRequest) {
                         senderRole: 'USER',
                         message: description || 'No description provided',
                         attachments: {
-                            create: attachments?.map((url: string) => ({
+                            create: (attachments || []).map((url: string) => ({
                                 url: url,
                                 type: 'image'
-                            })) || []
+                            }))
                         }
                     }
                 }

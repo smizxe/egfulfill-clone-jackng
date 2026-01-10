@@ -11,6 +11,7 @@ export async function GET(request: Request) {
             select: {
                 id: true,
                 email: true,
+                name: true,
                 isActive: true,
                 createdAt: true,
                 _count: {
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, password } = body;
+        const { email, password, name } = body;
 
         if (!email || !password) {
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         const newUser = await prisma.user.create({
             data: {
                 email,
+                name: name || null,
                 passwordHash,
                 role: 'STAFF',
             }
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
             id: newUser.id,
             email: newUser.email,
+            name: newUser.name,
             role: newUser.role,
             createdAt: newUser.createdAt
         });

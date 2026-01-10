@@ -3,11 +3,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, message, Tag, Space, Card } from 'antd';
-import { UserAddOutlined, HistoryOutlined } from '@ant-design/icons';
+import { UserAddOutlined, HistoryOutlined, EditOutlined } from '@ant-design/icons';
 
 interface StaffUser {
     id: string;
     email: string;
+    name?: string;
     isActive: boolean;
     createdAt: string;
     _count: {
@@ -18,16 +19,24 @@ interface StaffUser {
 interface JobHistory {
     id: string;
     jobCode: string;
-    status: string;
     sku: string;
+    status: string;
     updatedAt: string;
 }
 
 export default function StaffManagementPage() {
     const [staff, setStaff] = useState<StaffUser[]>([]);
     const [loading, setLoading] = useState(false);
+
+    // Create Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
+
+    // Edit Modal State
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editForm] = Form.useForm();
+    const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
+
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<StaffUser | null>(null);
     const [jobHistory, setJobHistory] = useState<JobHistory[]>([]);
@@ -75,6 +84,38 @@ export default function StaffManagementPage() {
         }
     };
 
+    const handleEdit = (record: StaffUser) => {
+        setEditingStaff(record);
+        editForm.setFieldsValue({
+            name: record.name,
+            email: record.email,
+        });
+        setEditModalOpen(true);
+    };
+
+    const handleUpdate = async (values: any) => {
+        if (!editingStaff) return;
+        try {
+            const res = await fetch('/api/admin/staff/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...values, id: editingStaff.id }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                message.success('Staff updated successfully');
+                setEditModalOpen(false);
+                editForm.resetFields();
+                setEditingStaff(null);
+                fetchStaff();
+            } else {
+                message.error(data.error || 'Failed to update staff');
+            }
+        } catch (error) {
+            message.error('Error updating staff');
+        }
+    };
+
     const viewHistory = async (record: StaffUser) => {
         setSelectedStaff(record);
         setHistoryModalOpen(true);
@@ -93,6 +134,12 @@ export default function StaffManagementPage() {
     };
 
     const columns = [
+        {
+            title: 'Name',
+            dataIndex: 'name',
+            key: 'name',
+            render: (text: string) => text || <span className="text-gray-400">N/A</span>
+        },
         {
             title: 'Email',
             dataIndex: 'email',
@@ -115,6 +162,12 @@ export default function StaffManagementPage() {
             key: 'action',
             render: (_: any, record: StaffUser) => (
                 <Space>
+                    <Button
+                        icon={<EditOutlined />}
+                        onClick={() => handleEdit(record)}
+                    >
+                        Edit
+                    </Button>
                     <Button
                         icon={<HistoryOutlined />}
                         onClick={() => viewHistory(record)}
@@ -167,6 +220,7 @@ export default function StaffManagementPage() {
                 />
             </Card>
 
+            {/* Create Modal */}
             <Modal
                 title="Create New Staff"
                 open={isModalOpen}
@@ -174,6 +228,13 @@ export default function StaffManagementPage() {
                 footer={null}
             >
                 <Form form={form} onFinish={handleCreate} layout="vertical">
+                    <Form.Item
+                        name="name"
+                        label="Staff Name"
+                        rules={[{ required: true, message: 'Please enter staff name' }]}
+                    >
+                        <Input placeholder="Enter full name" />
+                    </Form.Item>
                     <Form.Item
                         name="email"
                         label="Email"
@@ -190,6 +251,41 @@ export default function StaffManagementPage() {
                     </Form.Item>
                     <Button type="primary" htmlType="submit" block>
                         Create Account
+                    </Button>
+                </Form>
+            </Modal>
+
+            {/* Edit Modal */}
+            <Modal
+                title="Edit Staff"
+                open={editModalOpen}
+                onCancel={() => setEditModalOpen(false)}
+                footer={null}
+            >
+                <Form form={editForm} onFinish={handleUpdate} layout="vertical">
+                    <Form.Item
+                        name="name"
+                        label="Staff Name"
+                        rules={[{ required: true, message: 'Please enter staff name' }]}
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name="email"
+                        label="Email"
+                        rules={[{ required: true, type: 'email' }]}
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name="password"
+                        label="New Password"
+                        help="Leave blank to keep current password"
+                    >
+                        <Input.Password placeholder="Enter new password to change" />
+                    </Form.Item>
+                    <Button type="primary" htmlType="submit" block>
+                        Update Staff
                     </Button>
                 </Form>
             </Modal>

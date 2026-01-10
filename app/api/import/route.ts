@@ -37,10 +37,33 @@ export async function POST(request: Request) {
                 include: { seller: { include: { wallet: true } } }
             });
 
-            if (!user || !user.seller) {
-                return NextResponse.json({ error: 'Seller account not found' }, { status: 401 });
+            if (!user) {
+                return NextResponse.json({ error: 'User not found' }, { status: 401 });
             }
-            const sellerId = user.seller.id;
+
+            const { targetSellerId } = body;
+            let sellerId = '';
+            let sellerWallet = null;
+
+            if (targetSellerId && user.role === 'ADMIN') {
+                // Admin importing for a seller
+                const targetSeller = await prisma.seller.findUnique({
+                    where: { id: targetSellerId },
+                    include: { wallet: true }
+                });
+                if (!targetSeller) {
+                    return NextResponse.json({ error: 'Target seller not found' }, { status: 404 });
+                }
+                sellerId = targetSeller.id;
+                sellerWallet = targetSeller.wallet;
+            } else {
+                // Seller importing for themselves
+                if (!user.seller) {
+                    return NextResponse.json({ error: 'Seller account not found' }, { status: 401 });
+                }
+                sellerId = user.seller.id;
+                sellerWallet = user.seller.wallet;
+            }
 
             // Execute Creation Transaction (NO WALLET DEDUCTION)
             const transactionResult = await prisma.$transaction(async (tx) => {
@@ -116,6 +139,9 @@ export async function POST(request: Request) {
                     }
                 }
                 return { count: createdOrderCodes.length };
+            }, {
+                maxWait: 10000,
+                timeout: 30000
             });
 
             return NextResponse.json({
@@ -286,8 +312,18 @@ export async function POST(request: Request) {
                 // Try to limit DB calls: only fetch if not in a "inventoryCache" (which we need to define scope for)
                 // But simplified: Just await prisma.inventoryItem
 
-                const inventoryItem = await prisma.inventoryItem.findUnique({
-                    where: { sku_color_size: { sku: sku, color: color || '', size: size || '' } }
+                // Inventory Check - Fetch all items for SKU to allow case-insensitive matching
+                // Logic: SKU must be exact (usually), but Color/Size can be case-mismatched or null vs ""
+                const inventoryItems = await prisma.inventoryItem.findMany({
+                    where: { sku }
+                });
+
+                const inventoryItem = inventoryItems.find(inv => {
+                    const dbColor = (inv.color || '').toLowerCase();
+                    const reqColor = (color || '').toLowerCase();
+                    const dbSize = (inv.size || '').toLowerCase();
+                    const reqSize = (size || '').toLowerCase();
+                    return dbColor === reqColor && dbSize === reqSize;
                 });
 
                 if (!inventoryItem || inventoryItem.onHand < qty) {
@@ -381,7 +417,10 @@ export async function POST(request: Request) {
                 }
 
                 orderItems.push({
-                    sku, color, size, qty,
+                    sku,
+                    color: inventoryItem ? (inventoryItem.color || '') : color,
+                    size: inventoryItem ? (inventoryItem.size || '') : size,
+                    qty,
                     designs: JSON.stringify(designs),
                     notes: String(row['notes'] || '').trim(),
                     priceToCharge,

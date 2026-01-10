@@ -3,11 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
     try {
-        const { orderId, action, reason } = await request.json(); // action: 'APPROVE' | 'REJECT'
+        const body = await request.json();
+        const { orderId, action, rejectionReason } = body; // action: 'APPROVE' | 'REJECT'
 
         if (!orderId || !action) {
-            return NextResponse.json({ error: 'Missing orderId or action' }, { status: 400 });
+            return NextResponse.json({ error: 'Order ID and action (APPROVE/REJECT) are required' }, { status: 400 });
         }
+
+        const newStatus = action === 'APPROVE' ? 'PROCESSING' : 'REJECTED';
 
         const order = await prisma.order.findUnique({
             where: { id: orderId },
@@ -41,51 +44,6 @@ export async function POST(request: Request) {
                         note: `Payment for Order ${order.orderCode}`
                     }
                 });
-
-                // 3. Update Order and Jobs to RECEIVED
-                await tx.order.update({
-                    where: { id: orderId },
-                    data: { status: 'RECEIVED' }
-                });
-
-                await tx.job.updateMany({
-                    where: { orderId: orderId },
-                    data: { status: 'RECEIVED' }
-                });
-
-                return { success: true, status: 'RECEIVED' };
-
-            } else if (action === 'REJECT') {
-                // 1. Update Status
-                await tx.order.update({
-                    where: { id: orderId },
-                    data: { status: 'REJECTED' }
-                });
-                await tx.job.updateMany({
-                    where: { orderId: orderId },
-                    data: { status: 'REJECTED' }
-                });
-
-                // 2. NO wallet refund needed - balance was never deducted during import
-                // (Deduction only happens on APPROVE)
-
-                // 3. Revert Inventory Reservation
-                for (const job of order.jobs) {
-                    const invColor = job.color || "";
-                    const invSize = job.size || "";
-                    await tx.inventoryItem.update({
-                        where: {
-                            sku_color_size: {
-                                sku: job.sku,
-                                color: invColor,
-                                size: invSize
-                            }
-                        },
-                        data: {
-                            reserved: { decrement: job.qty }
-                        }
-                    });
-                }
 
                 return { success: true, status: 'REJECTED' };
             } else {

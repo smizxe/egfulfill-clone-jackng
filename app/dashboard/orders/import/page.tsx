@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Upload, Button, message, Steps, Result, Table, Tag, Typography, Alert, Modal, Space, Collapse } from 'antd';
+import { Card, Upload, Button, App, Steps, Result, Table, Tag, Typography, Alert, Modal, Space, Collapse } from 'antd';
 import { InboxOutlined, FileExcelOutlined, CheckCircleOutlined, CloseCircleOutlined, WalletOutlined, DollarCircleOutlined, CalculatorOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { ColumnsType } from 'antd/es/table';
@@ -10,6 +10,8 @@ const { Dragger } = Upload;
 const { Text } = Typography;
 
 export default function ImportOrdersPage() {
+    const { message } = App.useApp(); // Use hook for context-aware message
+
     const [currentStep, setCurrentStep] = useState(0);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [uploading, setUploading] = useState(false);

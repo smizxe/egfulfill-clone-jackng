@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Descriptions, Table, Tag, Button, Space } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
+import { Modal, Descriptions, Table, Tag, Button, Space, Alert } from 'antd';
+import { WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import ReportTicketModal from './ReportTicketModal';
 
 interface OrderDetailsModalProps {

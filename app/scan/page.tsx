@@ -28,6 +28,14 @@ export default function ScanPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code })
             });
+            if (res.status === 401) {
+                message.error('Authentication required. Redirecting to login...');
+                setTimeout(() => {
+                    window.location.href = '/login?redirect=/scan';
+                }, 1500);
+                return;
+            }
+
             const data = await res.json();
 
             if (res.ok) {

@@ -80,15 +80,26 @@ const columns: ColumnsType<OrderType> = [
 ];
 
 
-import { EyeOutlined, WarningOutlined } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
-import { useState } from 'react';
+import { EyeOutlined, WarningOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Select } from 'antd';
+import { useState, useMemo } from 'react';
 import OrderDetailsModal from './OrderDetailsModal';
 import ReportTicketModal from './ReportTicketModal';
+import EditOrderModal from './EditOrderModal';
 
 export default function OrdersTable({ orders }: { orders: any[] }) {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+    // Edit Order State
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingOrder, setEditingOrder] = useState<any>(null);
+
+    const filteredOrders = useMemo(() => {
+        if (!statusFilter || statusFilter === 'ALL') return orders;
+        return orders.filter(o => (o.status || '').toUpperCase() === statusFilter);
+    }, [orders, statusFilter]);
 
     // Ticket Report State
     const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -97,6 +108,11 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
     const handleViewDetails = (order: any) => {
         setSelectedOrder(order);
         setModalVisible(true);
+    };
+
+    const handleEditOrder = (order: any) => {
+        setEditingOrder(order);
+        setEditModalVisible(true);
     };
 
     const handleReportIssue = (order: any) => {
@@ -192,39 +208,81 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
             title: 'REPORT',
             key: 'report',
             align: 'center',
-            render: (_, record) => (
-                <Tooltip title="Report Issue / Refund Request">
-                    <Button
-                        type="text"
-                        danger
-                        icon={<WarningOutlined />}
-                        onClick={() => handleReportIssue(record)}
-                        className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                    />
-                </Tooltip>
-            )
+            render: (_, record) => {
+                const s = (record.status || '').toUpperCase();
+                // Allow report only if Shipped, Completed, or Received (Paid is usually before shipping, so check)
+                // User said: "only orders that have shipped"
+                // Let's assume SHIPPED, COMPLETED.
+                const canReport = s.includes('SHIPPED') || s.includes('COMPLETED') || s.includes('RECEIVED');
+
+                return (
+                    <Tooltip title={canReport ? "Report Issue / Refund Request" : "Order must be shipped to report issue"}>
+                        <Button
+                            type="text"
+                            danger
+                            disabled={!canReport}
+                            icon={<WarningOutlined />}
+                            onClick={() => canReport && handleReportIssue(record)}
+                            className={canReport ? "hover:bg-red-50 dark:hover:bg-red-900/20" : "opacity-30"}
+                        />
+                    </Tooltip>
+                );
+            }
         },
         {
             title: 'ACTION',
             key: 'action',
-            render: (_, record) => (
-                <Tooltip title="View Details">
-                    <Button
-                        type="text"
-                        icon={<EyeOutlined />}
-                        className="text-zinc-500 hover:text-sky-500"
-                        onClick={() => handleViewDetails(record)}
-                    />
-                </Tooltip>
-            )
+            render: (_, record) => {
+                const canEdit = (record.status || '').toUpperCase() === 'PENDING_APPROVAL';
+                return (
+                    <div className="flex gap-2">
+                        <Tooltip title="View Details">
+                            <Button
+                                type="text"
+                                icon={<EyeOutlined />}
+                                className="text-zinc-500 hover:text-sky-500"
+                                onClick={() => handleViewDetails(record)}
+                            />
+                        </Tooltip>
+                        {canEdit && (
+                            <Tooltip title="Edit Order">
+                                <Button
+                                    type="text"
+                                    icon={<EditOutlined />}
+                                    className="text-zinc-500 hover:text-blue-500"
+                                    onClick={() => handleEditOrder(record)}
+                                />
+                            </Tooltip>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 
     return (
         <div className="glass-panel rounded-2xl p-1 overflow-hidden">
+            {/* Filter Bar */}
+            <div className="p-4 flex gap-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-100 dark:border-zinc-800">
+                <Select
+                    placeholder="Filter by Status"
+                    allowClear
+                    style={{ width: 200 }}
+                    onChange={val => setStatusFilter(val)}
+                    options={[
+                        { label: 'All Statuses', value: 'ALL' },
+                        { label: 'Pending Approval', value: 'PENDING_APPROVAL' },
+                        { label: 'Processing', value: 'PROCESSING' },
+                        { label: 'Shipped', value: 'SHIPPED' },
+                        { label: 'Completed', value: 'COMPLETED' },
+                        { label: 'Cancelled', value: 'CANCELLED' },
+                    ]}
+                />
+            </div>
+
             <Table
                 columns={columns}
-                dataSource={orders}
+                dataSource={filteredOrders}
                 rowKey="id"
                 pagination={{ pageSize: 10 }}
                 className="glass-table"
@@ -243,6 +301,15 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
                     onCancel={() => setReportModalVisible(false)}
                     orderId={orderForTicket.id}
                     onSuccess={() => setReportModalVisible(false)}
+                />
+            )}
+
+            {editingOrder && (
+                <EditOrderModal
+                    visible={editModalVisible}
+                    onCancel={() => setEditModalVisible(false)}
+                    order={editingOrder}
+                    onSuccess={() => setEditModalVisible(false)}
                 />
             )}
         </div>

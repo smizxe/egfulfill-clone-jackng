@@ -76,7 +76,7 @@ export default function ProductList({ products }: ProductListProps) {
                                 <Col xs={24} sm={12} md={8} lg={6} xl={4} key={product.id}>
                                     <Link href={`/dashboard/products/${product.id}`} className="block h-full">
                                         <div className="glass-card h-full rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                                            <div className="h-48 overflow-hidden relative bg-white dark:bg-zinc-800 flex items-center justify-center">
+                                            <div className="h-48 overflow-hidden relative bg-white flex items-center justify-center">
                                                 <img
                                                     alt={product.name}
                                                     src={coverImage}

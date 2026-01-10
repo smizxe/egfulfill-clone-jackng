@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, message, Space } from 'antd';
+import { Table, Button, Modal, message, Space, Input } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
@@ -39,37 +39,53 @@ export default function ApprovalClient({ orders: initialOrders }: { orders: any[
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [loading, setLoading] = useState(false);
 
+    // Rejection State
+    const [rejectModalVisible, setRejectModalVisible] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
     useEffect(() => {
         setOrders(initialOrders);
     }, [initialOrders]);
 
     const handleAction = (orderId: string, action: 'APPROVE' | 'REJECT') => {
-        Modal.confirm({
-            title: `Are you sure you want to ${action} this order?`,
-            content: action === 'REJECT' ? 'Seller will be refunded automatically.' : 'Production process will start.',
-            okText: action === 'APPROVE' ? 'Approve' : 'Reject',
-            okType: action === 'APPROVE' ? 'primary' : 'danger',
-            onOk: async () => {
-                try {
-                    setLoading(true);
-                    const res = await fetch('/api/admin/orders/approve', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderId, action }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error);
+        if (action === 'REJECT') {
+            setSelectedOrderId(orderId);
+            setRejectReason('');
+            setRejectModalVisible(true);
+            return;
+        }
 
-                    message.success(`Order ${action}D successfully`);
-                    setOrders(prev => prev.filter(o => o.id !== orderId));
-                    router.refresh();
-                } catch (error: any) {
-                    message.error(error.message);
-                } finally {
-                    setLoading(false);
-                }
-            }
+        // Approve Logic (Immediate)
+        Modal.confirm({
+            title: 'Are you sure you want to APPROVE this order?',
+            content: 'Production process will start.',
+            okText: 'Approve',
+            okType: 'primary',
+            onOk: async () => submitAction(orderId, 'APPROVE')
         });
+    };
+
+    const submitAction = async (orderId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/admin/orders/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, action, rejectionReason: reason }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            message.success(`Order ${action}D successfully`);
+            setOrders(prev => prev.filter(o => o.id !== orderId));
+            router.refresh();
+            setRejectModalVisible(false);
+        } catch (error: any) {
+            message.error(error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const expandedRowRender = (record: Order) => {
@@ -185,6 +201,33 @@ export default function ApprovalClient({ orders: initialOrders }: { orders: any[
                     pagination={{ pageSize: 10 }}
                 />
             </div>
+            {/* Rejection Modal */}
+            <Modal
+                title="Reject Order"
+                open={rejectModalVisible}
+                onOk={() => {
+                    if (!rejectReason.trim()) {
+                        message.error('Please provide a reason for rejection');
+                        return;
+                    }
+                    if (selectedOrderId) {
+                        submitAction(selectedOrderId, 'REJECT', rejectReason);
+                    }
+                }}
+                onCancel={() => setRejectModalVisible(false)}
+                okText="Reject Order"
+                okButtonProps={{ danger: true, loading: loading }}
+            >
+                <div>
+                    <p className="mb-2 text-gray-500">Please provide a reason. The seller will see this message.</p>
+                    <Input.TextArea
+                        rows={4}
+                        placeholder="e.g. Invalid shipping address, Model out of stock..."
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                    />
+                </div>
+            </Modal>
         </div>
     );
 }
