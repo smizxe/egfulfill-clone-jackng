@@ -1,7 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { Modal, Typography, Form, InputNumber, Input, Button, notification, Divider } from 'antd';
+import { Modal, Typography, Form, InputNumber, Input, Button, notification, Divider, Upload, message } from 'antd';
 import { QRCodeSVG } from 'qrcode.react';
+import { UploadOutlined } from '@ant-design/icons';
+import type { UploadFile } from 'antd/es/upload/interface';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -15,6 +17,7 @@ interface TopUpModalProps {
 
 export default function TopUpModal({ visible, onClose, userId, email, onSuccess }: TopUpModalProps) {
     const [loading, setLoading] = useState(false);
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [form] = Form.useForm();
 
     // Display email only as requested  
@@ -24,18 +27,38 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
     React.useEffect(() => {
         if (visible) {
             form.setFieldsValue({ note: transferNote });
+            setFileList([]);
         }
     }, [transferNote, visible, form]);
 
     const handleSubmit = async (values: any) => {
         setLoading(true);
         try {
+            let evidenceUrl = '';
+
+            // Upload Proof if exists
+            if (fileList.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileList[0].originFileObj as File);
+
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (uploadRes.ok) {
+                    const data = await uploadRes.json();
+                    evidenceUrl = data.url;
+                }
+            }
+
             const res = await fetch('/api/wallet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount: values.amount,
-                    transferContent: values.note || transferNote
+                    transferContent: values.note || transferNote,
+                    evidenceUrl
                 })
             });
 
@@ -43,6 +66,7 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
 
             notification.success({ title: 'Top-up request submitted successfully' });
             form.resetFields();
+            setFileList([]);
             onClose();
             if (onSuccess) onSuccess();
 
@@ -84,7 +108,7 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
 
                 <Title level={5}>Step 2: Submit Request</Title>
                 <Paragraph type="secondary">
-                    After transferring, please enter the amount below so Admin can approve it.
+                    After transferring, please enter the amount below and attach proof.
                 </Paragraph>
 
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -107,6 +131,18 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
                         initialValue={transferNote}
                     >
                         <Input placeholder="Enter transaction code or content used" />
+                    </Form.Item>
+
+                    <Form.Item label="Proof of Transfer (Optional)">
+                        <Upload
+                            listType="picture"
+                            maxCount={1}
+                            fileList={fileList}
+                            onChange={({ fileList }) => setFileList(fileList)}
+                            beforeUpload={() => false}
+                        >
+                            <Button icon={<UploadOutlined />}>Upload Evidence</Button>
+                        </Upload>
                     </Form.Item>
 
                     <Form.Item>

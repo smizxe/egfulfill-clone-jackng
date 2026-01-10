@@ -80,7 +80,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { amount, transferContent } = body;
+  const { amount, transferContent, evidenceUrl } = body;
 
   if (!amount || amount <= 0) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
@@ -104,6 +104,7 @@ export async function POST(request: Request) {
         currency: 'USD',
         transferContent: transferContent || `Topup from ${user.email}`,
         status: 'PENDING',
+        evidenceUrl: evidenceUrl || null,
       }
     });
 

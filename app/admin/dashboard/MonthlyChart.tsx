@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -12,7 +11,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from 'recharts';
-import { Card, Spin, Select, Segmented, Space, DatePicker } from 'antd';
+import { Card, Spin, Select, Segmented, Space } from 'antd';
 import dayjs from 'dayjs';
 
 interface ChartData {
@@ -20,6 +19,7 @@ interface ChartData {
     wallet: number;
     orders: number;
     releases: number;
+    displayDate: string;
 }
 
 const MONTHS = [
@@ -27,12 +27,19 @@ const MONTHS = [
     'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export default function MonthlyChart() {
+interface MonthlyChartProps {
+    onDateSelect?: (date: string) => void;
+    selectedDate?: string | null;
+    activeMetric: 'Orders' | 'Wallet' | 'Releases';
+    setActiveMetric: (metric: 'Orders' | 'Wallet' | 'Releases') => void;
+}
+
+export default function MonthlyChart({ onDateSelect, selectedDate, activeMetric, setActiveMetric }: MonthlyChartProps) {
     const [data, setData] = useState<ChartData[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(dayjs().month());
     const [selectedYear, setSelectedYear] = useState(dayjs().year());
-    const [activeMetric, setActiveMetric] = useState<'Orders' | 'Wallet' | 'Releases'>('Orders');
+
 
     const fetchData = async () => {
         setLoading(true);
@@ -67,6 +74,7 @@ export default function MonthlyChart() {
 
     useEffect(() => {
         fetchData();
+        // Reset selected date logic could go here if we wanted to clear selection on month change
     }, [selectedMonth, selectedYear]);
 
     // Configuration for Pastel Theme
@@ -78,10 +86,53 @@ export default function MonthlyChart() {
 
     const currentConfig = config[activeMetric];
 
+    // Custom dot component (Visual only - renders on all data points)
+    const CustomDot = (props: any) => {
+        const { cx, cy } = props;
+
+        return (
+            <circle
+                cx={cx}
+                cy={cy}
+                r={5}
+                fill={currentConfig.color}
+                stroke="#fff"
+                strokeWidth={2}
+            />
+        );
+    };
+
+
+
+    // Custom Cursor component (Handles click on vertical space)
+    const CustomCursor = (props: any) => {
+        const { x, y, width, height, payload } = props;
+
+        const handleClick = () => {
+            if (payload && payload.length > 0) {
+                const date = payload[0].payload.date;
+                console.log('Cursor clicked! Date:', date);
+                if (onDateSelect) onDateSelect(date);
+            }
+        };
+
+        return (
+            <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onClick={handleClick}
+            />
+        );
+    };
+
     return (
         <Card
             className="glass-card border-0 shadow-sm"
-            styles={{ body: { padding: '24px' } }}
+            styles={{ body: { padding: '24px', width: '100%' } }}
         >
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <div>
@@ -125,8 +176,32 @@ export default function MonthlyChart() {
                     <Spin size="large" />
                 </div>
             ) : (
-                <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div
+                    style={{ width: '100%', height: 350, outline: 'none' }}
+                    className="outline-none"
+                    tabIndex={-1}
+                >
+                    <style jsx global>{`
+                        /* Aggressively remove all outlines for this chart */
+                        .recharts-wrapper,
+                        .recharts-surface,
+                        .recharts-responsive-container,
+                        .recharts-layer,
+                        .recharts-tooltip-cursor,
+                        div[class^="recharts-"],
+                        svg.recharts-surface {
+                            outline: none !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                        }
+                        
+                        /* Remove focus rings specifically */
+                        *:focus, *:focus-visible {
+                            outline: none !important;
+                            box-shadow: none !important;
+                        }
+                    `}</style>
+                    <ResponsiveContainer width="100%" height="100%" className="[&_path]:outline-none [&_svg]:outline-none" id="chart-container">
                         <AreaChart
                             data={data}
                             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -159,7 +234,7 @@ export default function MonthlyChart() {
                                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                                 }}
                                 itemStyle={{ color: currentConfig.color, fontWeight: 600 }}
-                                cursor={{ stroke: currentConfig.color, strokeWidth: 1, strokeDasharray: '4 4' }}
+                                cursor={<CustomCursor />} /* Use Custom Cursor for interaction */
                             />
                             <Area
                                 type="monotone"
@@ -168,7 +243,8 @@ export default function MonthlyChart() {
                                 strokeWidth={3}
                                 fillOpacity={1}
                                 fill="url(#colorMetric)"
-                                activeDot={{ r: 6, strokeWidth: 0, fill: currentConfig.color }}
+                                dot={<CustomDot />}
+                                activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff', fill: currentConfig.color }}
                                 animationDuration={1000}
                             />
                         </AreaChart>

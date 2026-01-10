@@ -15,6 +15,7 @@ import {
     PrinterOutlined,
     TruckOutlined,
     ShopOutlined,
+    FileTextOutlined,
 } from '@ant-design/icons';
 import { Package, Ticket } from 'lucide-react';
 import { useTheme } from '@/components/Providers/ThemeContext';
@@ -31,6 +32,7 @@ export default function AdminSidebar({ collapsed, onCollapse }: AdminSidebarProp
 
     const menuItems = [
         { key: '/admin/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+        { key: '/admin/reports', icon: <FileTextOutlined />, label: 'Reports' },
         { key: '/admin/orders/approval', icon: <Package size={18} />, label: 'Order Approval' },
         { key: '/admin/products', icon: <ShoppingOutlined />, label: 'Products' },
         { key: '/admin/inventory', icon: <ShopOutlined />, label: 'Inventory' },

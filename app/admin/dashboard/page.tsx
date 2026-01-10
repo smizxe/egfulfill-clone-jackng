@@ -4,7 +4,8 @@ import { Row, Col } from 'antd';
 import { UserOutlined, ShoppingOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import MonthlyChart from './MonthlyChart';
-import DashboardNotificationList from '../components/DashboardNotificationList';
+import DashboardNotificationList from '../components/DashboardNotificationList'; // Keep for now or remove if unused, but remove usage
+import DashboardClient from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,13 +63,8 @@ export default async function AdminOverviewPage() {
                 ))}
             </Row>
 
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 h-full">
-                    <MonthlyChart />
-                </div>
-                <div className="lg:col-span-1 h-full">
-                    <DashboardNotificationList />
-                </div>
+            <div className="lg:col-span-3 h-full">
+                <DashboardClient />
             </div>
         </div>
     );

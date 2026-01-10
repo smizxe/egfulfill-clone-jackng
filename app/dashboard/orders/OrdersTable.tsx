@@ -79,18 +79,29 @@ const columns: ColumnsType<OrderType> = [
     },
 ];
 
-import { EyeOutlined } from '@ant-design/icons';
+
+import { EyeOutlined, WarningOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import { useState } from 'react';
 import OrderDetailsModal from './OrderDetailsModal';
+import ReportTicketModal from './ReportTicketModal';
 
 export default function OrdersTable({ orders }: { orders: any[] }) {
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [modalVisible, setModalVisible] = useState(false);
 
+    // Ticket Report State
+    const [reportModalVisible, setReportModalVisible] = useState(false);
+    const [orderForTicket, setOrderForTicket] = useState<any>(null);
+
     const handleViewDetails = (order: any) => {
         setSelectedOrder(order);
         setModalVisible(true);
+    };
+
+    const handleReportIssue = (order: any) => {
+        setOrderForTicket(order);
+        setReportModalVisible(true);
     };
 
     const columns: ColumnsType<OrderType> = [
@@ -178,6 +189,22 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
             ),
         },
         {
+            title: 'REPORT',
+            key: 'report',
+            align: 'center',
+            render: (_, record) => (
+                <Tooltip title="Report Issue / Refund Request">
+                    <Button
+                        type="text"
+                        danger
+                        icon={<WarningOutlined />}
+                        onClick={() => handleReportIssue(record)}
+                        className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                    />
+                </Tooltip>
+            )
+        },
+        {
             title: 'ACTION',
             key: 'action',
             render: (_, record) => (
@@ -209,6 +236,15 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
                 onCancel={() => setModalVisible(false)}
                 order={selectedOrder}
             />
+
+            {orderForTicket && (
+                <ReportTicketModal
+                    visible={reportModalVisible}
+                    onCancel={() => setReportModalVisible(false)}
+                    orderId={orderForTicket.id}
+                    onSuccess={() => setReportModalVisible(false)}
+                />
+            )}
         </div>
     );
 }

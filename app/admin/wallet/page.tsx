@@ -104,8 +104,8 @@ export default function AdminWalletPage() {
             key: 'type',
             render: (type: string) => (
                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${type.includes('TOP_UP')
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
                     }`}>
                     {type.replace(/_/g, ' ')}
                 </span>
@@ -131,6 +131,18 @@ export default function AdminWalletPage() {
 
     const columnsPending = [
         ...columnsHistory.filter(c => c.key !== 'status'), // Reuse columns
+        {
+            title: 'EVIDENCE',
+            dataIndex: 'evidenceUrl',
+            key: 'evidenceUrl',
+            render: (url: string) => (
+                url ?
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        View Proof
+                    </a>
+                    : <span className="text-gray-400">No Proof</span>
+            ),
+        },
         {
             title: 'STATUS',
             dataIndex: 'status',
