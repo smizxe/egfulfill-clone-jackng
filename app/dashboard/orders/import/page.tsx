@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Upload, Button, message, Steps, Result, Table, Tag, Typography, Alert, Modal } from 'antd';
-import { InboxOutlined, FileExcelOutlined, CheckCircleOutlined, CloseCircleOutlined, WalletOutlined, DollarCircleOutlined, CalculatorOutlined } from '@ant-design/icons';
+import { Card, Upload, Button, message, Steps, Result, Table, Tag, Typography, Alert, Modal, Space, Collapse } from 'antd';
+import { InboxOutlined, FileExcelOutlined, CheckCircleOutlined, CloseCircleOutlined, WalletOutlined, DollarCircleOutlined, CalculatorOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -219,8 +219,42 @@ export default function ImportOrdersPage() {
                         Analyze File
                     </Button>
 
-                    <div className="mt-4 text-gray-500 text-xs">
-                        * Strict Validation Enabled: Design 1 and Position 1 must be present together.
+                    <div className="mt-6">
+                        <Space className="w-full justify-between" align="center">
+                            <Text strong>Need a template?</Text>
+                            <Button
+                                icon={<DownloadOutlined />}
+                                href="/template_import_orders.xlsx"
+                                download="template_import_orders.xlsx"
+                            >
+                                Download Excel Template
+                            </Button>
+                        </Space>
+                    </div>
+
+                    <div className="mt-8">
+                        <Collapse
+                            items={[{
+                                key: '1',
+                                label: <Space><InfoCircleOutlined className="text-blue-500" /> <Text strong>Import Rules & Requirements</Text></Space>,
+                                children: (
+                                    <ul className="list-disc pl-5 space-y-1 text-zinc-600">
+                                        <li><Text strong>File Format:</Text> .xlsx or .xls only.</li>
+                                        <li><Text strong>Design 1 & Position 1:</Text> Must be present together. If you specify a design file, you must specify the print position.</li>
+                                        <li><Text strong>Required Fields:</Text>
+                                            <ul className="list-circle pl-5 mt-1">
+                                                <li>Order ID (leave blank for new auto-gen ID)</li>
+                                                <li>SKU (must match an existing product variant)</li>
+                                                <li>Recipient Name</li>
+                                                <li>Address Line 1</li>
+                                                <li>City, State, Zip, Country</li>
+                                            </ul>
+                                        </li>
+                                        <li><Text strong>Strict Validation:</Text> Any row with missing required fields will be marked as invalid and cannot be imported.</li>
+                                    </ul>
+                                )
+                            }]}
+                        />
                     </div>
                 </Card>
             )}
