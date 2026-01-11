@@ -5,6 +5,7 @@ import { theme } from 'antd';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Dashboard/Sidebar';
 import TopBar from '@/components/Dashboard/TopBar';
+import WalletSidebar from '@/components/Dashboard/WalletSidebar';
 
 export default function DashboardLayout({
     children,
@@ -17,6 +18,10 @@ export default function DashboardLayout({
     const {
         token: { borderRadiusLG },
     } = theme.useToken();
+
+    // Show Right Sidebar on all pages EXECPT tickets
+    // Also excluding explicit auth pages if any inside dashboard, but mostly tickets.
+    const showRightSidebar = !pathname.includes('/dashboard/tickets');
 
     return (
         <div className="min-h-screen transition-colors duration-500 ease-in-out">
@@ -35,6 +40,7 @@ export default function DashboardLayout({
                 className={`
                     relative z-10 pt-20 pb-8 px-6 transition-all duration-300
                     ${collapsed ? 'ml-20' : 'ml-64'}
+                    ${showRightSidebar ? 'mr-72' : ''}
                 `}
             >
                 <div
@@ -43,6 +49,9 @@ export default function DashboardLayout({
                     {children}
                 </div>
             </main>
-        </div>
+
+
+            {showRightSidebar && <WalletSidebar />}
+        </div >
     );
 }

@@ -38,7 +38,7 @@ export default function DashboardClient({ user, stats }: DashboardClientProps) {
                                         {stat.title}
                                     </p>
                                     <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                                        {stat.prefix}{stat.value.toLocaleString()}
+                                        {stat.prefix}{typeof stat.value === 'number' ? stat.value.toLocaleString('en-US') : stat.value}
                                     </h3>
                                 </div>
                                 <div

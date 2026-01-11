@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, notification, Modal, Input, Select, Spin, Descriptions, Space } from 'antd';
-import { ReloadOutlined, RocketOutlined, PrinterOutlined, LinkOutlined } from '@ant-design/icons';
+import { ReloadOutlined, RocketOutlined, PrinterOutlined, LinkOutlined, DollarCircleOutlined } from '@ant-design/icons';
 
 interface Job {
     id: string;
@@ -68,6 +68,11 @@ export default function ShippingPage() {
     const [creating, setCreating] = useState(false);
     const [labelUrl, setLabelUrl] = useState<string | null>(null);
 
+    // Bulk Rates State
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [bulkRates, setBulkRates] = useState<Record<string, { price: number; currency: string; service: string }>>({});
+    const [bulkLoading, setBulkLoading] = useState(false);
+
     const fetchOrders = async () => {
         setLoading(true);
         try {
@@ -93,15 +98,38 @@ export default function ShippingPage() {
         setRates([]);
         setSelectedRate('');
         setLabelUrl(null);
-        setWeight('0.5');
-        setLength('20');
-        setWidth('12');
-        setHeight('6');
+        // Logic Update: Scale Weight and Dims based on Qty
+        const totalQty = order.jobs.reduce((sum, job) => sum + job.qty, 0);
+
+        // Base values for Qty 1
+        let baseWeight = 0.36;
+        let baseL = 20;
+        let baseW = 12;
+        let baseH = 6;
+
+        let finalWeight = baseWeight;
+        let finalL = baseL;
+        let finalW = baseW;
+        let finalH = baseH;
+
+        if (totalQty > 1) {
+            finalWeight = baseWeight * totalQty;
+            const extra = 3 * (totalQty - 1);
+            finalL += extra;
+            finalW += extra;
+            finalH += extra;
+        }
+
+        setWeight(finalWeight.toFixed(2));
+        setLength(finalL.toString());
+        setWidth(finalW.toString());
+        setHeight(finalH.toString());
+
         setContents('Sweatshirt, 50/50 poly/cotton');
         setValue('10');
         setCurrency('CAD');
         setHsCode('6110.20.20.41');
-        setCountryOfOrigin('CN');
+        setCountryOfOrigin('MX'); // Updated to MX as requested
         setCustomsDescription('Shirt 50/50 Cotton/Poly');
         // Try to detect country code from job data (handle swapped fields)
         const job0 = order.jobs[0];
@@ -230,6 +258,97 @@ export default function ShippingPage() {
         }
     };
 
+    const fetchBulkRates = async () => {
+        if (selectedRowKeys.length === 0) {
+            notification.warning({ message: 'No orders selected' });
+            return;
+        }
+
+        setBulkLoading(true);
+        const newBulkRates = { ...bulkRates };
+
+        for (const orderId of selectedRowKeys) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) continue;
+
+            const job0 = order.jobs[0];
+            if (!job0) continue;
+
+            // Apply scaling logic for API call
+            const totalQty = order.jobs.reduce((sum, job) => sum + job.qty, 0);
+            let w = 0.36;
+            let l = 20, wd = 12, h = 6;
+
+            if (totalQty > 1) {
+                w = 0.36 * totalQty;
+                const extra = 3 * (totalQty - 1);
+                l += extra;
+                wd += extra;
+                h += extra;
+            }
+
+            try {
+                // Determine raw address/country logic same as openShippingModal
+                let rCountry = 'US';
+                let rZip = job0.zip || '';
+                const rawC = job0.country || '';
+
+                if (rawC.length === 2 && /^[A-Z]{2}$/i.test(rawC)) {
+                    rCountry = rawC.toUpperCase();
+                } else if (rZip.length === 2 && /^[A-Z]{2}$/i.test(rZip)) {
+                    rCountry = rZip.toUpperCase();
+                    rZip = rawC;
+                }
+
+                const res = await fetch('/api/admin/shipping/rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        toAddress: {
+                            name: job0.recipientName,
+                            street1: job0.address1,
+                            city: job0.city,
+                            state: job0.state,
+                            postalCode: rZip,
+                            countryCode: rCountry,
+                            phone: job0.phone,
+                        },
+                        weight: w,
+                        length: l,
+                        width: wd,
+                        height: h,
+                        packageContents: 'Sweatshirt, 50/50 poly/cotton',
+                        value: 10,
+                        currency: 'CAD',
+                        hsCode: '6110.20.20.41',
+                        countryOfOrigin: 'MX',
+                        customsDescription: 'Shirt 50/50 Cotton/Poly'
+                    }),
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.rates && data.rates.length > 0) {
+                        const best = data.rates[0]; // Assuming sorted by price? Default usually is.
+                        newBulkRates[order.id] = {
+                            price: best.price,
+                            currency: best.currency,
+                            service: best.postage_description
+                        };
+                    }
+                }
+            } catch (e) {
+                console.error(`Failed rate for ${order.id}`, e);
+            }
+
+            // Update UI progressively
+            setBulkRates({ ...newBulkRates });
+        }
+
+        setBulkLoading(false);
+        notification.success({ message: 'Bulk rates fetching completed' });
+    };
+
     const columns = [
         {
             title: 'ORDER CODE',
@@ -270,6 +389,22 @@ export default function ShippingPage() {
             render: (tracking: string | null) => tracking ? (
                 <span className="font-mono text-xs px-2 py-1 rounded bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{tracking}</span>
             ) : '-',
+        },
+        {
+            title: 'EST. RATE',
+            key: 'bulkRate',
+            render: (_: any, record: Order) => {
+                const rate = bulkRates[record.id];
+                if (rate) {
+                    return (
+                        <div className="text-xs">
+                            <div className="font-bold text-green-600">${rate.price} {rate.currency}</div>
+                            <div className="text-zinc-400 text-[10px] truncate max-w-[100px]" title={rate.service}>{rate.service}</div>
+                        </div>
+                    );
+                }
+                return <span className="text-zinc-300">-</span>;
+            }
         },
         {
             title: 'ACTION',
@@ -318,6 +453,17 @@ export default function ShippingPage() {
                 >
                     Refresh
                 </Button>
+                {selectedRowKeys.length > 0 && (
+                    <Button
+                        type="primary"
+                        icon={<DollarCircleOutlined />}
+                        onClick={fetchBulkRates}
+                        loading={bulkLoading}
+                        className="ml-2 bg-green-600 hover:bg-green-500"
+                    >
+                        Get Bulk Rates ({selectedRowKeys.length})
+                    </Button>
+                )}
             </div>
 
             <div className="glass-panel rounded-2xl overflow-hidden p-1 shadow-sm">
@@ -331,6 +477,10 @@ export default function ShippingPage() {
                     loading={loading}
                     pagination={{ pageSize: 20 }}
                     className="glass-table"
+                    rowSelection={{
+                        selectedRowKeys,
+                        onChange: (keys) => setSelectedRowKeys(keys)
+                    }}
                 />
             </div>
 
