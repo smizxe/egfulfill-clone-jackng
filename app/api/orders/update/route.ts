@@ -25,41 +25,39 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        if (existingOrder.status !== 'PENDING_APPROVAL') {
-            return NextResponse.json({ error: 'Only pending orders can be edited' }, { status: 400 });
+        const allowedInfo = ['PENDING_APPROVAL', 'RECEIVED'];
+        if (!allowedInfo.includes(existingOrder.status)) {
+            return NextResponse.json({ error: 'Only pending or received orders can be edited' }, { status: 400 });
         }
 
         // 2. Transaction to update Order and Jobs
         await prisma.$transaction(async (tx) => {
+            let statusUpdate = {};
+            // If order was RECEIVED, revert to PENDING_APPROVAL
+            if (existingOrder.status === 'RECEIVED') {
+                statusUpdate = { status: 'PENDING_APPROVAL' };
+
+                // Optional: Log this revert
+                await tx.auditLog.create({
+                    data: {
+                        actorUserId: userId,
+                        actorType: 'USER',
+                        action: 'ORDER_REVERT',
+                        entityType: 'ORDER',
+                        entityId: orderId,
+                        metaJson: JSON.stringify({ oldStatus: 'RECEIVED', newStatus: 'PENDING_APPROVAL', reason: 'User Edit' })
+                    }
+                });
+            }
+
             // Update Order Details
             await tx.order.update({
                 where: { id: orderId },
                 data: {
                     shippingCountry: country,
+                    ...statusUpdate
                 }
             });
-
-            // Update Jobs (Items) - We assume full replacement or update of existing jobs?
-            // Since items might change SKU/Color/Size, keeping track of IDs is tricky if the user deleted/added rows.
-            // Simplest approach for "Edit" modal that returns the full new state of items:
-            // 1. Diffs? 
-            //    - If SKU/Color/Size/Qty match existing job, keep it (maybe update recipient info).
-            //    - If not, create new / delete old?
-            // User request is "Edit".
-            // Let's iterate through the provided items.
-            // But wait, changing SKU/Size/Color implies a different product.
-            // And we need to manage Inventory.
-
-            // Strategy:
-            // Loop through existing existingOrder.jobs.
-            //   - If an existing job is NOT in the new `items` list (by ID), delete it (and return inventory).
-            // Loop through new `items`.
-            //   - If it has an ID, update it.
-            //     - If Qty changed, adjust inventory.
-            //   - If no ID (new item), create it and reserve inventory.
-
-            // Actually, simpler implementation for Phase 1:
-            // Update recipient info on ALL jobs of this order (since typical use case is fixing address).
 
             // Recipient info mapping
             const recipientUpdate = {
@@ -74,16 +72,6 @@ export async function POST(req: NextRequest) {
             };
 
             let newTotalAmount = 0;
-
-            // Handle Item Updates
-            // We expect `items` to be an array of objects with { id (optional), sku, color, size, qty }
-
-            // For simplicity and robustness in a "mini import" style edit:
-            // We can iterate the input items.
-            // However, matching them to existing IDs is important to minimalize churn.
-
-            // Let's assume the frontend sends back the `id` if it was an existing row.
-
             const processedJobIds = new Set<string>();
 
             for (const item of items) {
@@ -100,19 +88,8 @@ export async function POST(req: NextRequest) {
                     (v.size?.toLowerCase() === (item.size || '').toLowerCase())
                 );
 
-                // If variant doesn't exist but product does, technically invalid, but maybe allow as custom? 
-                // No, system relies on variants.
-                // If not found, use base price?
                 const priceToCharge = variant?.basePrice || 0;
-                // Recalculate shipping/fees? 
-                // For now, let's just calc line cost roughly or allow frontend to send it?
-                // Safest is to recalc.
-
-                const lineCost = priceToCharge * item.qty; // Simplified for edit (ignoring complex shipping tiers for now or reusing import logic?)
-                // To be safe, we should reuse the calculation logic from Import, but that's complex to duplicate.
-                // Let's stick to base price * qty for simplicity or copy logic.
-                // Let's assume priceToCharge is enough for now.
-
+                const lineCost = priceToCharge * item.qty;
                 newTotalAmount += lineCost;
 
                 if (item.id) {
@@ -135,8 +112,8 @@ export async function POST(req: NextRequest) {
                         if (item.designUrl) {
                             designsData.push({
                                 url: item.designUrl,
-                                location: item.designPosition || 'Front', // Default if missing
-                                position: item.designPosition || 'Front' // Support both keys
+                                location: item.designPosition || 'Front',
+                                position: item.designPosition || 'Front'
                             });
                         }
                         const designsJson = JSON.stringify(designsData);
@@ -149,36 +126,22 @@ export async function POST(req: NextRequest) {
                                 color: item.color,
                                 size: item.size,
                                 qty: item.qty,
-                                priceToCharge: priceToCharge, // Update price if variant changed
-                                designs: designsJson
+                                priceToCharge: priceToCharge,
+                                designs: designsJson,
+                                status: (existingOrder.status === 'RECEIVED') ? 'PENDING_APPROVAL' : undefined
                             }
                         });
                     }
-                } else {
-                    // Create New Job (if user added a row)
-                    // ... Not implemented in this UI iteration usually, but good to handle
-                    // For now, skipping "Add Item" in Edit Modal unless requested.
                 }
             }
 
             // Update Order Total
-            // Note: This simple sum misses shipping fees logic from Import. 
-            // Ideally should refactor valid cost calc into a shared utils.
-            // But for "Edit Address" primarily, just updating totals if qty changed.
-
             await tx.order.update({
                 where: { id: orderId },
                 data: {
-                    totalAmount: newTotalAmount, // This might lose shipping fees calculated at import.
-                    // Better approach: Calculate delta? 
-                    // Or: Update jobs with just address if items didn't change?
-                    ...recipientUpdate // Actually Order doesn't have all address fields, Jobs do. Order has shippingCountry.
+                    totalAmount: newTotalAmount,
                 }
             });
-
-            // Correction: Order model only has `shippingCountry`. 
-            // The `recipient*` fields are on `Job`. 
-            // So we loop updated all jobs with the new address.
         });
 
         return NextResponse.json({ success: true });
