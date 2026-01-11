@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, notification, Modal, Form, Select, InputNumber, Tabs, Popconfirm } from 'antd';
-import { WalletOutlined, PlusOutlined, ReloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { WalletOutlined, PlusOutlined, ReloadOutlined, CheckCircleOutlined, SettingOutlined } from '@ant-design/icons';
 
 interface Transaction {
     id: string;
@@ -15,6 +15,9 @@ interface Transaction {
         name: string | null;
     };
     isRequest?: boolean;
+    currency?: string;
+    exchangeRate?: number;
+    amountReceived?: number;
 }
 
 interface User {
@@ -28,7 +31,11 @@ export default function AdminWalletPage() {
     const [data, setData] = useState<{ transactions: Transaction[], users: User[] }>({ transactions: [], users: [] });
     const [loading, setLoading] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [rateModalVisible, setRateModalVisible] = useState(false);
+    const [currentRate, setCurrentRate] = useState(25000);
     const [form] = Form.useForm();
+    const [rateForm] = Form.useForm();
+    const [api, contextHolder] = notification.useNotification();
 
     const fetchData = async () => {
         setLoading(true);
@@ -37,8 +44,16 @@ export default function AdminWalletPage() {
             if (!res.ok) throw new Error('Failed to fetch data');
             const result = await res.json();
             setData(result);
+            // Fetch Rate
+            fetch('/api/settings').then(r => r.json()).then(d => {
+                if (d.rate) {
+                    setCurrentRate(d.rate);
+                    rateForm.setFieldsValue({ rate: d.rate });
+                }
+            });
         } catch (error) {
-            notification.error({ title: 'Error loading admin wallet data' });
+            api.error({ message: 'Error loading admin wallet data' });
+            // console.error(error);
         } finally {
             setLoading(false);
         }
@@ -57,12 +72,30 @@ export default function AdminWalletPage() {
             });
             if (!res.ok) throw new Error('Transaction failed');
 
-            notification.success({ title: 'Top-up successful' });
+            api.success({ message: 'Top-up successful' });
             setIsModalVisible(false);
             form.resetFields();
             fetchData();
         } catch (error) {
-            notification.error({ title: 'Failed to top up' });
+            api.error({ message: 'Failed to top up' });
+        }
+    };
+
+    const handleUpdateRate = async (values: any) => {
+        try {
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(values)
+            });
+            if (!res.ok) throw new Error('Failed to update rate');
+            const data = await res.json();
+
+            api.success({ message: 'Exchange rate updated' });
+            setCurrentRate(data.rate);
+            setRateModalVisible(false);
+        } catch (error) {
+            api.error({ message: 'Failed to update rate' });
         }
     };
 
@@ -78,10 +111,10 @@ export default function AdminWalletPage() {
             });
             if (!res.ok) throw new Error('Confirmation failed');
 
-            notification.success({ title: 'Request approved successfully' });
+            api.success({ message: 'Request approved successfully' });
             fetchData();
         } catch (error) {
-            notification.error({ title: 'Failed to approve request' });
+            api.error({ message: 'Failed to approve request' });
         }
     };
 
@@ -130,7 +163,37 @@ export default function AdminWalletPage() {
     ];
 
     const columnsPending = [
-        ...columnsHistory.filter(c => c.key !== 'status'), // Reuse columns
+        {
+            title: 'DATE',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (text: string) => <span className="text-zinc-500 dark:text-zinc-500">{new Date(text).toLocaleString()}</span>,
+        },
+        {
+            title: 'USER',
+            dataIndex: ['user', 'email'],
+            key: 'user',
+            render: (email: string) => <span className="font-medium text-zinc-700 dark:text-zinc-300">{email}</span>
+        },
+        {
+            title: 'SENT AMOUNT (VND)',
+            key: 'amountVnd',
+            render: (r: Transaction) => (
+                <div>
+                    <div className="font-bold text-zinc-800">{r.currency === 'VND' ? `${r.amount.toLocaleString()} VND` : '-'}</div>
+                    {r.exchangeRate && <div className="text-xs text-zinc-500">Rate: {r.exchangeRate.toLocaleString()}</div>}
+                </div>
+            )
+        },
+        {
+            title: 'RECEIVE (USD)',
+            key: 'amountUsd',
+            render: (r: Transaction) => (
+                <span className="font-bold text-emerald-600">
+                    ${(r.amountReceived ?? r.amount).toFixed(2)}
+                </span>
+            )
+        },
         {
             title: 'EVIDENCE',
             dataIndex: 'evidenceUrl',
@@ -176,16 +239,26 @@ export default function AdminWalletPage() {
 
     return (
         <div>
+            {contextHolder}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">Wallet Management</h1>
-                <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => setIsModalVisible(true)}
-                    className="bg-emerald-600 hover:bg-emerald-500 border-none shadow-lg shadow-emerald-500/20 h-10 px-5 rounded-xl font-semibold"
-                >
-                    Manual Add Funds
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        icon={<SettingOutlined />}
+                        onClick={() => setRateModalVisible(true)}
+                        className="h-10 px-4 rounded-xl"
+                    >
+                        Rate: {currentRate.toLocaleString('en-US')}
+                    </Button>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => setIsModalVisible(true)}
+                        className="bg-emerald-600 hover:bg-emerald-500 border-none shadow-lg shadow-emerald-500/20 h-10 px-5 rounded-xl font-semibold"
+                    >
+                        Manual Add Funds
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -271,6 +344,29 @@ export default function AdminWalletPage() {
                             <Select.Option value="ADJUSTMENT">Adjustment</Select.Option>
                             <Select.Option value="BONUS">Bonus</Select.Option>
                         </Select>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
+                title="Update Exchange Rate"
+                open={rateModalVisible}
+                onCancel={() => setRateModalVisible(false)}
+                onOk={() => rateForm.submit()}
+                width={400}
+            >
+                <Form form={rateForm} layout="vertical" onFinish={handleUpdateRate}>
+                    <Form.Item
+                        name="rate"
+                        label="VND per 1 USD"
+                        rules={[{ required: true, message: 'Please enter rate' }]}
+                        extra={`Current: ${currentRate.toLocaleString()} VND = 1 USD`}
+                    >
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                        />
                     </Form.Item>
                 </Form>
             </Modal>

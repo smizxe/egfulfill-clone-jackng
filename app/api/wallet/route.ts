@@ -96,12 +96,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
+    // Fetch Rate
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'VND_USD_RATE' } });
+    const rate = setting ? parseFloat(setting.value) : 25000;
+    const amountVnd = parseFloat(amount);
+    const amountUsd = amountVnd / rate;
+
     // Create Topup Request
     const topup = await prisma.topupRequest.create({
       data: {
         sellerId: user.seller.id,
-        amount: parseFloat(amount),
-        currency: 'USD',
+        amount: amountVnd,
+        currency: 'VND',
+        exchangeRate: rate,
+        amountReceived: amountUsd,
         transferContent: transferContent || `Topup from ${user.email}`,
         status: 'PENDING',
         evidenceUrl: evidenceUrl || null,

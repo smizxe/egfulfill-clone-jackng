@@ -19,6 +19,16 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
     const [loading, setLoading] = useState(false);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [form] = Form.useForm();
+    const [rate, setRate] = useState<number>(25000);
+    const [api, contextHolder] = notification.useNotification();
+
+    React.useEffect(() => {
+        if (visible) {
+            fetch('/api/settings').then(r => r.json()).then(d => {
+                if (d.rate) setRate(d.rate);
+            });
+        }
+    }, [visible]);
 
     // Display email only as requested  
     const transferNote = email || 'your-email';
@@ -64,14 +74,14 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
 
             if (!res.ok) throw new Error('Failed to submit request');
 
-            notification.success({ title: 'Top-up request submitted successfully' });
+            api.success({ message: 'Top-up request submitted successfully' });
             form.resetFields();
             setFileList([]);
             onClose();
             if (onSuccess) onSuccess();
 
         } catch (error) {
-            notification.error({ title: 'Failed to submit request' });
+            api.error({ message: 'Failed to submit request' });
         } finally {
             setLoading(false);
         }
@@ -86,6 +96,7 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
             centered
             width={600}
         >
+            {contextHolder}
             <div style={{ padding: '0 20px' }}>
 
                 <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -111,18 +122,35 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
                     After transferring, please enter the amount below and attach proof.
                 </Paragraph>
 
+
+
+                    // ...
+
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
                     <Form.Item
                         name="amount"
-                        label="Amount Transferred ($)"
+                        label={rate ? `Amount Transferred (VND) - Rate: ${rate.toLocaleString('en-US')} VND/$` : "Amount Transferred (VND)"}
                         rules={[{ required: true, message: 'Please enter amount' }]}
                     >
                         <InputNumber
                             style={{ width: '100%' }}
-                            min={1}
-                            prefix="$"
-                            placeholder="e.g. 1000"
+                            min={1000}
+                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                            addonAfter="VND"
+                            placeholder="e.g. 2,500,000"
                         />
+                    </Form.Item>
+
+                    <Form.Item shouldUpdate={(prev, curr) => prev.amount !== curr.amount}>
+                        {({ getFieldValue }) => {
+                            const amount = getFieldValue('amount') || 0;
+                            return (
+                                <div className="text-right font-medium text-emerald-600">
+                                    Estimated: ${(amount / rate).toFixed(2)} USD
+                                </div>
+                            );
+                        }}
                     </Form.Item>
 
                     <Form.Item

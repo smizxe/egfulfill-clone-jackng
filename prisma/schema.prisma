@@ -88,6 +88,8 @@ model TopupRequest {
   sellerId        String
   amount          Float
   currency        String    @default("VND")
+  exchangeRate    Float?    // Rate used (e.g. 25000 VND / USD)
+  amountReceived  Float?    // USD Amount credited
   bankName        String?
   bankAccount     String?
   transferContent String?
@@ -98,6 +100,13 @@ model TopupRequest {
   createdAt       DateTime  @default(now())
   confirmedBy     User?     @relation("ConfirmedBy", fields: [confirmedById], references: [id])
   seller          Seller    @relation(fields: [sellerId], references: [id])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }
 
 model Product {

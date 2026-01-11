@@ -28,7 +28,10 @@ export async function GET(request: Request) {
                 email: req.seller.users[0]?.email || req.seller.contactEmail || req.seller.name,
                 name: req.seller.name
             },
-            isRequest: true // Flag to identify request vs ledger
+            isRequest: true,
+            currency: req.currency,
+            exchangeRate: req.exchangeRate,
+            amountReceived: req.amountReceived
         }));
 
         // Map ledger to match frontend Transaction interface
@@ -93,6 +96,8 @@ export async function POST(request: Request) {
 
                 // 3. Update Wallet Balance
                 const sellerId = req.sellerId;
+                const creditAmount = req.amountReceived ?? req.amount;
+
                 let wallet = await tx.wallet.findUnique({ where: { sellerId } });
                 if (!wallet) {
                     wallet = await tx.wallet.create({ data: { sellerId, balance: 0 } });
@@ -100,7 +105,7 @@ export async function POST(request: Request) {
 
                 await tx.wallet.update({
                     where: { sellerId },
-                    data: { balance: { increment: req.amount } }
+                    data: { balance: { increment: creditAmount } }
                 });
 
                 // 4. Create Ledger Entry
@@ -108,8 +113,8 @@ export async function POST(request: Request) {
                     data: {
                         sellerId,
                         type: 'CREDIT',
-                        amount: req.amount,
-                        currency: req.currency,
+                        amount: creditAmount,
+                        currency: 'USD',
                         refType: 'TOPUP',
                         refId: req.id,
                         note: req.transferContent,
