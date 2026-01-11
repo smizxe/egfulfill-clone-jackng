@@ -19,19 +19,48 @@ export default function OrderDetailsModal({ visible, onCancel, order, showReport
 
     const columns = [
         {
-            title: 'Job Code',
-            dataIndex: 'jobCode',
-            key: 'jobCode',
-        },
-        {
             title: 'Item',
             key: 'item',
             render: (_: any, record: any) => (
                 <div>
-                    <div>{record.sku}</div>
+                    <div className="font-medium">{record.sku}</div>
                     <div className="text-xs text-gray-500">{record.color} / {record.size}</div>
                 </div>
             )
+        },
+        {
+            title: 'Design',
+            key: 'design',
+            render: (_: any, record: any) => {
+                try {
+                    const designs = JSON.parse(record.designs || '[]');
+                    const d = Array.isArray(designs) && designs.length > 0 ? designs[0] : null;
+                    const position = d?.location || d?.position || 'N/A';
+
+                    return (
+                        <div className="text-xs">
+                            <span className="text-gray-500">Pos:</span> {position}
+                        </div>
+                    );
+                } catch {
+                    return <span className="text-gray-400">N/A</span>;
+                }
+            }
+        },
+        {
+            title: 'Link',
+            key: 'link',
+            render: (_: any, record: any) => {
+                try {
+                    const designs = JSON.parse(record.designs || '[]');
+                    const url = (Array.isArray(designs) && designs.length > 0) ? designs[0].url : null;
+
+                    if (url) {
+                        return <a href={url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">View</a>;
+                    }
+                } catch { }
+                return <span className="text-gray-400">-</span>;
+            }
         },
         {
             title: 'Qty',
@@ -64,6 +93,16 @@ export default function OrderDetailsModal({ visible, onCancel, order, showReport
         );
     }
 
+    const firstJob = order.jobs?.[0] || {};
+    const fullAddress = [
+        firstJob.address1,
+        firstJob.address2,
+        firstJob.city,
+        firstJob.state,
+        firstJob.zip,
+        firstJob.country || order.shippingCountry
+    ].filter(Boolean).join(', ');
+
     return (
         <>
             <Modal
@@ -82,7 +121,12 @@ export default function OrderDetailsModal({ visible, onCancel, order, showReport
                     <Descriptions.Item label="Date">{new Date(order.createdAt).toLocaleDateString()}</Descriptions.Item>
                     <Descriptions.Item label="Tracking">{order.trackingNumber || 'N/A'}</Descriptions.Item>
                     <Descriptions.Item label="Carrier">{order.carrier || 'N/A'}</Descriptions.Item>
-                    {order.shippingCountry && <Descriptions.Item label="Destination">{order.shippingCountry}</Descriptions.Item>}
+
+                    <Descriptions.Item label="Recipient">{firstJob.recipientName || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Phone">{firstJob.phone || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Address" span={2}>
+                        {fullAddress || 'N/A'}
+                    </Descriptions.Item>
                 </Descriptions>
 
                 <h3 className="font-bold mb-2">Order Items (Jobs)</h3>

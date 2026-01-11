@@ -288,16 +288,18 @@ export default function ShippingPage() {
             }
 
             try {
-                // Determine raw address/country logic same as openShippingModal
-                let rCountry = 'US';
+                // Determine raw address/country logic
+                let rCountry = job0.country || 'US'; // Don't default to US immediately if we have a string like "Canada"
                 let rZip = job0.zip || '';
                 const rawC = job0.country || '';
 
-                if (rawC.length === 2 && /^[A-Z]{2}$/i.test(rawC)) {
-                    rCountry = rawC.toUpperCase();
-                } else if (rZip.length === 2 && /^[A-Z]{2}$/i.test(rZip)) {
+                // Handle Swapped Fields (common issue: Country in Zip field)
+                if (rZip.length === 2 && /^[A-Z]{2}$/i.test(rZip) && (!rawC || rawC.length > 2)) {
+                    // Likely swapped: Zip is "US", Country is "12345" (or blank)
                     rCountry = rZip.toUpperCase();
-                    rZip = rawC;
+                    rZip = rawC; // Swap back
+                } else if (rawC.length === 2 && /^[A-Z]{2}$/i.test(rawC)) {
+                    rCountry = rawC.toUpperCase();
                 }
 
                 const res = await fetch('/api/admin/shipping/rates', {

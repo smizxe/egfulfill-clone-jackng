@@ -66,6 +66,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ rates });
     } catch (error: any) {
         console.error('Get rates error:', error);
-        return NextResponse.json({ error: error.message || 'Failed to get shipping rates' }, { status: 500 });
+
+        let status = 500;
+        let message = error.message || 'Failed to get shipping rates';
+
+        // Attempt to parse status from Stallion error message
+        if (message.includes('Stallion API Error:')) {
+            const match = message.match(/(\d{3})/);
+            if (match) {
+                status = parseInt(match[1]);
+            }
+        }
+
+        return NextResponse.json({ error: message, details: error.stack }, { status });
     }
 }

@@ -105,6 +105,9 @@ export default function TicketManagement() {
             if (isRefund) {
                 return (
                     <div className="flex gap-2">
+                        <Button size="small" onClick={() => handleView(record)} icon={<EyeOutlined />}>
+                            View
+                        </Button>
                         <Popconfirm
                             title="Issue Refund?"
                             description="This will refund the order value to the seller's wallet."
@@ -128,6 +131,9 @@ export default function TicketManagement() {
             if (isReplacement) {
                 return (
                     <div className="flex gap-2">
+                        <Button size="small" onClick={() => handleView(record)} icon={<EyeOutlined />}>
+                            View
+                        </Button>
                         <Button
                             type="primary"
                             size="small"
