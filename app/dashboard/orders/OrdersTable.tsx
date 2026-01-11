@@ -3,6 +3,7 @@
 import React from 'react';
 import { Table, Tag, Card } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import * as XLSX from 'xlsx';
 
 interface OrderType {
     id: string;
@@ -14,73 +15,7 @@ interface OrderType {
     source?: string;
 }
 
-const columns: ColumnsType<OrderType> = [
-    {
-        title: 'ORDER ID',
-        dataIndex: 'orderCode',
-        key: 'orderCode',
-        render: (text) => <a className="text-blue-600 hover:underline">{text}</a>,
-    },
-    {
-        title: 'STATUS',
-        dataIndex: 'status',
-        key: 'status',
-        render: (status) => {
-            let color = 'geekblue';
-            const statusLower = status?.toLowerCase() || '';
-
-            if (statusLower.includes('cancel') || statusLower.includes('reject')) {
-                color = 'red';
-            } else if (statusLower.includes('completed') || statusLower.includes('paid')) {
-                color = 'green';
-            } else if (statusLower.includes('received')) {
-                color = 'blue';
-            } else if (statusLower.includes('process')) {
-                color = 'orange';
-            } else if (statusLower.includes('pending')) {
-                color = 'gold';
-            }
-
-            return (
-                <Tag color={color} key={status}>
-                    {status?.toUpperCase().replace('_', ' ')}
-                </Tag>
-            );
-        },
-    },
-    {
-        title: 'SOURCE',
-        key: 'source',
-        render: (_, record) => record.source || 'Direct',
-    },
-    {
-        title: 'TOTAL',
-        dataIndex: 'totalAmount',
-        key: 'totalAmount',
-        render: (val) => val ? `$${val.toFixed(2)}` : '$0.00'
-    },
-    {
-        title: 'DATE CREATED',
-        dataIndex: 'createdAt',
-        key: 'createdAt',
-        render: (date: Date) => {
-            try {
-                return new Date(date).toISOString().split('T')[0];
-            } catch {
-                return 'Invalid Date';
-            }
-        }
-    },
-    {
-        title: 'TRACKING ID',
-        dataIndex: 'trackingNumber',
-        key: 'trackingNumber',
-        render: (id) => <span className="text-gray-500">{id || 'N/A'}</span>,
-    },
-];
-
-
-import { EyeOutlined, WarningOutlined, EditOutlined } from '@ant-design/icons';
+import { EyeOutlined, WarningOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons';
 import { Button, Tooltip, Select } from 'antd';
 import { useState, useMemo } from 'react';
 import OrderDetailsModal from './OrderDetailsModal';
@@ -118,6 +53,23 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
     const handleReportIssue = (order: any) => {
         setOrderForTicket(order);
         setReportModalVisible(true);
+    };
+
+    const handleExport = () => {
+        const dataToExport = filteredOrders.map(o => ({
+            'Order ID': o.orderCode,
+            'Status': o.status,
+            'Total Amount': o.totalAmount,
+            'Currency': o.currency,
+            'Date Created': new Date(o.createdAt).toLocaleDateString(),
+            'Recipient Name': o.jobs?.[0]?.recipientName || '',
+            'Tracking Number': o.trackingNumber || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+        XLSX.writeFile(wb, `Orders_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     const columns: ColumnsType<OrderType> = [
@@ -211,8 +163,6 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
             render: (_, record) => {
                 const s = (record.status || '').toUpperCase();
                 // Allow report only if Shipped, Completed, or Received (Paid is usually before shipping, so check)
-                // User said: "only orders that have shipped"
-                // Let's assume SHIPPED, COMPLETED.
                 const canReport = s.includes('SHIPPED') || s.includes('COMPLETED') || s.includes('RECEIVED');
 
                 return (
@@ -233,7 +183,8 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
             title: 'ACTION',
             key: 'action',
             render: (_, record) => {
-                const canEdit = (record.status || '').toUpperCase() === 'PENDING_APPROVAL';
+                const canEdit = (record.status || '').toUpperCase() === 'PENDING_APPROVAL' ||
+                    (record.status || '').toUpperCase() === 'RECEIVED';
                 return (
                     <div className="flex gap-2">
                         <Tooltip title="View Details">
@@ -263,7 +214,7 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
     return (
         <div className="glass-panel rounded-2xl p-1 overflow-hidden">
             {/* Filter Bar */}
-            <div className="p-4 flex gap-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-100 dark:border-zinc-800">
+            <div className="p-4 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-100 dark:border-zinc-800">
                 <Select
                     placeholder="Filter by Status"
                     allowClear
@@ -272,12 +223,21 @@ export default function OrdersTable({ orders }: { orders: any[] }) {
                     options={[
                         { label: 'All Statuses', value: 'ALL' },
                         { label: 'Pending Approval', value: 'PENDING_APPROVAL' },
+                        { label: 'Received', value: 'RECEIVED' },
                         { label: 'Processing', value: 'PROCESSING' },
                         { label: 'Shipped', value: 'SHIPPED' },
                         { label: 'Completed', value: 'COMPLETED' },
                         { label: 'Cancelled', value: 'CANCELLED' },
                     ]}
                 />
+
+                <Button
+                    type="default"
+                    icon={<DownloadOutlined />}
+                    onClick={handleExport}
+                >
+                    Export Excel
+                </Button>
             </div>
 
             <Table

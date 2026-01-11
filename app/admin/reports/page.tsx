@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Select, Typography, Space } from 'antd';
+import { Card, Select, Typography, Space, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import DailyBreakdownTable from './DailyBreakdownTable';
+import ProductionReport from './ProductionReport';
 
 const { Title } = Typography;
 
@@ -15,6 +16,19 @@ const MONTHS = [
 export default function ReportsPage() {
     const [selectedMonth, setSelectedMonth] = useState(dayjs().month());
     const [selectedYear, setSelectedYear] = useState(dayjs().year());
+
+    const items = [
+        {
+            key: 'financial',
+            label: 'Financial Report',
+            children: <DailyBreakdownTable month={selectedMonth} year={selectedYear} />,
+        },
+        {
+            key: 'production',
+            label: 'Production Report',
+            children: <ProductionReport month={selectedMonth} year={selectedYear} />,
+        },
+    ];
 
     return (
         <div className="space-y-6">
@@ -49,7 +63,7 @@ export default function ReportsPage() {
                 </Space>
             </div>
 
-            <DailyBreakdownTable month={selectedMonth} year={selectedYear} />
+            <Tabs defaultActiveKey="financial" items={items} type="card" className="glass-tabs" />
         </div>
     );
 }

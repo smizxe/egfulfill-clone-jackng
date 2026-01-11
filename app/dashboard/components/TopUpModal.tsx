@@ -136,7 +136,7 @@ export default function TopUpModal({ visible, onClose, userId, email, onSuccess 
                             style={{ width: '100%' }}
                             min={1000}
                             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                            parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
                             addonAfter="VND"
                             placeholder="e.g. 2,500,000"
                         />

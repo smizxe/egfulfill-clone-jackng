@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Table, Tag, Space, Modal, Image, Button, Descriptions } from 'antd';
-import { MessageOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Modal, Image, Button, Descriptions, Popconfirm, message } from 'antd';
+import { MessageOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import CreateTicketModal from './CreateTicketModal';
 
@@ -36,6 +36,23 @@ export default function UserTicketsPage() {
             console.error('Failed to load tickets');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        try {
+            const res = await fetch(`/api/tickets/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                message.success('Ticket deleted successfully');
+                fetchTickets();
+            } else {
+                const data = await res.json();
+                message.error(data.error || 'Failed to delete ticket');
+            }
+        } catch (error) {
+            message.error('Failed to delete ticket');
         }
     };
 
@@ -77,12 +94,25 @@ export default function UserTicketsPage() {
             title: 'Action',
             key: 'action',
             render: (_: any, record: Ticket) => (
-                <Button
-                    icon={<MessageOutlined />}
-                    onClick={() => router.push(`/dashboard/tickets/${record.id}`)}
-                >
-                    View Ticket
-                </Button>
+                <Space>
+                    <Button
+                        icon={<MessageOutlined />}
+                        onClick={() => router.push(`/dashboard/tickets/${record.id}`)}
+                    >
+                        View
+                    </Button>
+                    {record.status === 'PENDING' && (
+                        <Popconfirm
+                            title="Delete this ticket?"
+                            description="Are you sure you want to delete this ticket? This action cannot be undone."
+                            onConfirm={() => handleDelete(record.id)}
+                            okText="Yes"
+                            cancelText="No"
+                        >
+                            <Button danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    )}
+                </Space>
             )
         }
     ];
